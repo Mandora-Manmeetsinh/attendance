@@ -8,29 +8,68 @@ import { supabase } from '@/integrations/supabase/client';
 import { MapPin, Loader2, Navigation } from 'lucide-react';
 import { toast } from 'sonner';
 
+interface Office {
+  id?: string;
+  latitude: number;
+  longitude: number;
+  radius_meters: number;
+  grace_period_mins: number;
+  name?: string;
+}
+
 export default function AdminSettings() {
-  const [office, setOffice] = useState<any>(null);
+  const [office, setOffice] = useState<Office>({
+    latitude: 0,
+    longitude: 0,
+    radius_meters: 100,
+    grace_period_mins: 15,
+  });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [gettingLocation, setGettingLocation] = useState(false);
 
   useEffect(() => {
-    supabase.from('offices').select('*').limit(1).single().then(({ data }) => {
-      if (data) setOffice(data);
+    supabase.from('offices').select('*').limit(1).single().then(({ data, error }) => {
+      if (data) {
+        setOffice(data);
+      }
+      // If no office exists or error, keep defaults
       setLoading(false);
     });
   }, []);
 
   const handleSave = async () => {
     setSaving(true);
-    const { error } = await supabase.from('offices').update({
+    
+    const officeData = {
       latitude: office.latitude,
       longitude: office.longitude,
       radius_meters: office.radius_meters,
       grace_period_mins: office.grace_period_mins,
-    }).eq('id', office.id);
+      name: office.name || 'Main Office',
+    };
+
+    let error;
+    
+    if (office.id) {
+      // Update existing office
+      const result = await supabase.from('offices').update(officeData).eq('id', office.id);
+      error = result.error;
+    } else {
+      // Insert new office
+      const result = await supabase.from('offices').insert(officeData).select().single();
+      error = result.error;
+      if (result.data) {
+        setOffice(result.data);
+      }
+    }
+    
     setSaving(false);
-    if (error) toast.error('Failed to save'); else toast.success('Settings saved!');
+    if (error) {
+      toast.error('Failed to save: ' + error.message);
+    } else {
+      toast.success('Settings saved!');
+    }
   };
 
   const useCurrentLocation = () => {
@@ -53,7 +92,7 @@ export default function AdminSettings() {
         setGettingLocation(false);
         toast.error('Failed to get location: ' + error.message);
       },
-      { enableHighAccuracy: true }
+      { enableHighAccuracy: true, timeout: 15000 }
     );
   };
 
@@ -67,16 +106,16 @@ export default function AdminSettings() {
           <CardHeader><CardTitle className="flex items-center gap-2"><MapPin className="w-5 h-5 text-primary" />Office Location</CardTitle></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Latitude</Label><Input type="number" step="any" value={office?.latitude || 0} onChange={(e) => setOffice({...office, latitude: parseFloat(e.target.value)})} /></div>
-              <div><Label>Longitude</Label><Input type="number" step="any" value={office?.longitude || 0} onChange={(e) => setOffice({...office, longitude: parseFloat(e.target.value)})} /></div>
+              <div><Label>Latitude</Label><Input type="number" step="any" value={office.latitude} onChange={(e) => setOffice({...office, latitude: parseFloat(e.target.value) || 0})} /></div>
+              <div><Label>Longitude</Label><Input type="number" step="any" value={office.longitude} onChange={(e) => setOffice({...office, longitude: parseFloat(e.target.value) || 0})} /></div>
             </div>
             <Button variant="outline" onClick={useCurrentLocation} disabled={gettingLocation} className="w-full">
               {gettingLocation ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Navigation className="w-4 h-4 mr-2" />}
               Use Current Location as Office
             </Button>
             <div className="grid grid-cols-2 gap-4">
-              <div><Label>Radius (meters)</Label><Input type="number" value={office?.radius_meters || 100} onChange={(e) => setOffice({...office, radius_meters: parseInt(e.target.value)})} /></div>
-              <div><Label>Grace Period (mins)</Label><Input type="number" value={office?.grace_period_mins || 15} onChange={(e) => setOffice({...office, grace_period_mins: parseInt(e.target.value)})} /></div>
+              <div><Label>Radius (meters)</Label><Input type="number" value={office.radius_meters} onChange={(e) => setOffice({...office, radius_meters: parseInt(e.target.value) || 100})} /></div>
+              <div><Label>Grace Period (mins)</Label><Input type="number" value={office.grace_period_mins} onChange={(e) => setOffice({...office, grace_period_mins: parseInt(e.target.value) || 15})} /></div>
             </div>
             <Button onClick={handleSave} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}Save Settings</Button>
           </CardContent>

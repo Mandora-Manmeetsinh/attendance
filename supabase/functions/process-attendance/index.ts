@@ -1,8 +1,39 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+// Allowed origins for CORS - restrict to your app domains
+const allowedOrigins = [
+  'https://id-preview--cfde5cb8-6da1-43c5-9698-a1f1033040f4.lovable.app',
+  'http://localhost:5173',
+  'http://localhost:3000',
+]
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+  const allowedOrigin = origin && allowedOrigins.some(allowed => origin.startsWith(allowed.replace(/\/$/, '')))
+    ? origin
+    : allowedOrigins[0]
+  
+  return {
+    'Access-Control-Allow-Origin': allowedOrigin,
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Vary': 'Origin',
+  }
+}
+
+// UUID validation regex
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+function isValidUUID(str: string): boolean {
+  return UUID_REGEX.test(str)
+}
+
+// Validate coordinate ranges
+function isValidLatitude(lat: number): boolean {
+  return lat >= -90 && lat <= 90
+}
+
+function isValidLongitude(lng: number): boolean {
+  return lng >= -180 && lng <= 180
 }
 
 // Haversine formula to calculate distance between two coordinates in meters
@@ -41,6 +72,9 @@ function determineStatus(
 }
 
 Deno.serve(async (req) => {
+  const origin = req.headers.get('Origin')
+  const corsHeaders = getCorsHeaders(origin)
+
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -73,6 +107,7 @@ Deno.serve(async (req) => {
     const userId = claimsData.claims.sub as string
     const { action, latitude, longitude, office_id } = await req.json()
 
+    // Validate action
     if (!action || !['check_in', 'check_out'].includes(action)) {
       return new Response(JSON.stringify({ error: 'Invalid action. Must be check_in or check_out' }), { 
         status: 400, 
@@ -80,8 +115,32 @@ Deno.serve(async (req) => {
       })
     }
 
+    // Validate latitude and longitude are numbers
     if (typeof latitude !== 'number' || typeof longitude !== 'number') {
       return new Response(JSON.stringify({ error: 'Valid latitude and longitude required' }), { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      })
+    }
+
+    // Validate coordinate ranges
+    if (!isValidLatitude(latitude)) {
+      return new Response(JSON.stringify({ error: 'Invalid latitude. Must be between -90 and 90' }), { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      })
+    }
+
+    if (!isValidLongitude(longitude)) {
+      return new Response(JSON.stringify({ error: 'Invalid longitude. Must be between -180 and 180' }), { 
+        status: 400, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      })
+    }
+
+    // Validate office_id format if provided
+    if (office_id && !isValidUUID(office_id)) {
+      return new Response(JSON.stringify({ error: 'Invalid office_id format' }), { 
         status: 400, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       })
@@ -101,7 +160,7 @@ Deno.serve(async (req) => {
       .single()
 
     if (profileError || !profile) {
-      console.error('Profile error:', profileError)
+      console.error('Profile fetch failed for user:', userId)
       return new Response(JSON.stringify({ error: 'User profile not found' }), { 
         status: 404, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -116,7 +175,7 @@ Deno.serve(async (req) => {
     const { data: office, error: officeError } = await officeQuery.limit(1).single()
 
     if (officeError || !office) {
-      console.error('Office error:', officeError)
+      console.error('Office configuration not found')
       return new Response(JSON.stringify({ error: 'Office configuration not found' }), { 
         status: 404, 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -128,7 +187,7 @@ Deno.serve(async (req) => {
     const bufferMeters = 20 // GPS accuracy buffer
     const isWithinRadius = distance <= (office.radius_meters + bufferMeters)
 
-    console.log(`User ${userId} distance from office: ${distance}m, radius: ${office.radius_meters}m, within: ${isWithinRadius}`)
+    console.log(`Attendance check: action=${action}, within_radius=${isWithinRadius}, distance=${Math.round(distance)}m`)
 
     const today = new Date().toISOString().split('T')[0]
     const now = new Date().toISOString()
@@ -178,7 +237,7 @@ Deno.serve(async (req) => {
         .single()
 
       if (insertError) {
-        console.error('Insert error:', insertError)
+        console.error('Failed to record check-in')
         return new Response(JSON.stringify({ error: 'Failed to record check-in' }), { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -243,7 +302,7 @@ Deno.serve(async (req) => {
         .single()
 
       if (updateError) {
-        console.error('Update error:', updateError)
+        console.error('Failed to record check-out')
         return new Response(JSON.stringify({ error: 'Failed to record check-out' }), { 
           status: 500, 
           headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
@@ -267,10 +326,10 @@ Deno.serve(async (req) => {
     })
 
   } catch (error) {
-    console.error('Error processing attendance:', error)
+    console.error('Attendance processing error')
     return new Response(JSON.stringify({ error: 'Internal server error' }), { 
       status: 500, 
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      headers: { ...getCorsHeaders(null), 'Content-Type': 'application/json' } 
     })
   }
 })

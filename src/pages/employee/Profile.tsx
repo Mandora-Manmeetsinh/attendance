@@ -11,7 +11,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
     Mail,
@@ -37,46 +36,8 @@ export default function Profile() {
     };
 
     const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        try {
-            setUploading(true);
-
-            if (!event.target.files || event.target.files.length === 0) {
-                throw new Error('You must select an image to upload.');
-            }
-
-            const file = event.target.files[0];
-            const fileExt = file.name.split('.').pop();
-            const filePath = `${user?.id}-${Math.random()}.${fileExt}`;
-
-            const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(filePath, file);
-
-            if (uploadError) {
-                throw uploadError;
-            }
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
-                .getPublicUrl(filePath);
-
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update({ avatar_url: publicUrl })
-                .eq('id', user?.id);
-
-            if (updateError) {
-                throw updateError;
-            }
-
-            toast.success('Avatar updated successfully!');
-            window.location.reload();
-
-        } catch (error: any) {
-            toast.error('Error uploading avatar: ' + error.message);
-        } finally {
-            setUploading(false);
-        }
+        toast.info("Avatar upload is currently disabled during migration.");
+        // TODO: Implement file upload with new backend
     };
 
     const stats = [
@@ -123,7 +84,7 @@ export default function Profile() {
                         <div className="flex flex-col md:flex-row items-start md:items-end gap-6 -mt-12">
                             <div className="relative group">
                                 <Avatar className="w-32 h-32 border-4 border-background shadow-xl">
-                                    <AvatarImage src={profile?.avatar_url} className="object-cover" />
+                                    <AvatarImage src={(profile as any)?.avatar_url} className="object-cover" />
                                     <AvatarFallback className="text-3xl font-bold bg-gradient-to-br from-primary to-indigo-600 text-white">
                                         {getInitials(profile?.full_name || '')}
                                     </AvatarFallback>

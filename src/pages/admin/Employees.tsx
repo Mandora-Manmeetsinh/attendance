@@ -3,7 +3,7 @@ import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { supabase } from '@/integrations/supabase/client';
+import client from '@/api/client';
 import {
   Users,
   Search,
@@ -34,13 +34,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 interface Employee {
-  id: string;
+  _id: string;
   full_name: string;
   email: string;
   role: string;
   shift_start: string;
   shift_end: string;
-  created_at: string;
+  createdAt: string;
 }
 
 export default function AdminEmployees() {
@@ -51,15 +51,35 @@ export default function AdminEmployees() {
 
   useEffect(() => {
     const fetchEmployees = async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (!error && data) {
-        setEmployees(data);
+      try {
+        // TODO: Implement /api/admin/employees endpoint
+        // For now, mocking data or using a placeholder
+        const mockEmployees: Employee[] = [
+          {
+            _id: '1',
+            full_name: 'John Doe',
+            email: 'john@example.com',
+            role: 'employee',
+            shift_start: '09:00:00',
+            shift_end: '18:00:00',
+            createdAt: new Date().toISOString()
+          },
+          {
+            _id: '2',
+            full_name: 'Jane Smith',
+            email: 'jane@example.com',
+            role: 'admin',
+            shift_start: '09:00:00',
+            shift_end: '18:00:00',
+            createdAt: new Date().toISOString()
+          }
+        ];
+        setEmployees(mockEmployees);
+      } catch (error) {
+        console.error("Error fetching employees", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
     fetchEmployees();
   }, []);
@@ -151,7 +171,7 @@ export default function AdminEmployees() {
             {viewMode === 'grid' ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 animate-scale-in">
                 {filteredEmployees.map((emp) => (
-                  <Card key={emp.id} className="group hover:shadow-medium transition-all duration-300 border-border/50 overflow-hidden">
+                  <Card key={emp._id} className="group hover:shadow-medium transition-all duration-300 border-border/50 overflow-hidden">
                     <CardHeader className="flex flex-row items-start justify-between pb-2">
                       <div className="flex items-center gap-3">
                         <Avatar className="w-12 h-12 border-2 border-background shadow-sm group-hover:scale-110 transition-transform duration-300">
@@ -195,7 +215,7 @@ export default function AdminEmployees() {
                         </div>
                         <div className="flex items-center gap-2 text-muted-foreground">
                           <Calendar className="w-4 h-4" />
-                          <span>Joined {format(new Date(emp.created_at), 'MMM d, yyyy')}</span>
+                          <span>Joined {format(new Date(emp.createdAt), 'MMM d, yyyy')}</span>
                         </div>
                       </div>
                       <div className="pt-2 flex gap-2">
@@ -221,7 +241,7 @@ export default function AdminEmployees() {
                     </TableHeader>
                     <TableBody>
                       {filteredEmployees.map((emp) => (
-                        <TableRow key={emp.id} className="hover:bg-muted/30 transition-colors">
+                        <TableRow key={emp._id} className="hover:bg-muted/30 transition-colors">
                           <TableCell className="pl-6">
                             <div className="flex items-center gap-3">
                               <Avatar className="w-9 h-9 border border-border">
@@ -251,7 +271,7 @@ export default function AdminEmployees() {
                           </TableCell>
                           <TableCell>
                             <div className="text-sm text-muted-foreground">
-                              {format(new Date(emp.created_at), 'MMM d, yyyy')}
+                              {format(new Date(emp.createdAt), 'MMM d, yyyy')}
                             </div>
                           </TableCell>
                           <TableCell>

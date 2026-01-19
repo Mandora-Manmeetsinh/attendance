@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { supabase } from '@/integrations/supabase/client';
+import client from '@/api/client';
 import {
   MapPin,
   Loader2,
@@ -12,9 +12,7 @@ import {
   Save,
   Settings,
   Bell,
-  Shield,
   Globe,
-  Smartphone
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
@@ -23,7 +21,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Office {
-  id?: string;
+  _id?: string;
   latitude: number;
   longitude: number;
   radius_meters: number;
@@ -44,12 +42,20 @@ export default function AdminSettings() {
   const [gettingLocation, setGettingLocation] = useState(false);
 
   useEffect(() => {
-    supabase.from('offices').select('*').limit(1).single().then(({ data, error }) => {
-      if (data) {
-        setOffice(data);
+    const fetchOffice = async () => {
+      try {
+        const { data } = await client.get('/office');
+        if (data) {
+          setOffice(data);
+        }
+      } catch (error) {
+        console.error("Error fetching office settings", error);
+        // Don't show error toast on initial load if no office exists yet
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    }
+    fetchOffice();
   }, []);
 
   const handleSave = async () => {
@@ -63,24 +69,14 @@ export default function AdminSettings() {
       name: office.name || 'Main Office',
     };
 
-    let error;
-
-    if (office.id) {
-      const result = await supabase.from('offices').update(officeData).eq('id', office.id);
-      error = result.error;
-    } else {
-      const result = await supabase.from('offices').insert(officeData).select().single();
-      error = result.error;
-      if (result.data) {
-        setOffice(result.data);
-      }
-    }
-
-    setSaving(false);
-    if (error) {
-      toast.error('Failed to save settings: ' + error.message);
-    } else {
+    try {
+      const { data } = await client.post('/office', officeData);
+      setOffice(data);
       toast.success('Settings saved successfully!');
+    } catch (error: any) {
+      toast.error('Failed to save settings: ' + (error.response?.data?.message || error.message));
+    } finally {
+      setSaving(false);
     }
   };
 

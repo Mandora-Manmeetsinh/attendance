@@ -3,7 +3,7 @@ import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { StatCard } from '@/components/StatCard';
 import { StatusBadge } from '@/components/StatusBadge';
-import { supabase } from '@/integrations/supabase/client';
+import client from '@/api/client';
 import {
   Users,
   Clock,
@@ -31,9 +31,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  BarChart,
-  Bar,
-  Cell
 } from 'recharts';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 
@@ -53,52 +50,41 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const today = new Date().toISOString().split('T')[0];
-      const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-      const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+      try {
+        // In a real app, you would have dedicated dashboard endpoints
+        // For now, we'll simulate this by fetching raw data or using mock data
+        // TODO: Implement /api/admin/dashboard/stats endpoint
 
-      const [employeesRes, attendanceRes, weeklyRes] = await Promise.all([
-        supabase.from('profiles').select('id').eq('role', 'employee'),
-        supabase.from('attendance_records').select('*, profiles(full_name, email)').eq('date', today).order('check_in', { ascending: false }),
-        supabase.from('attendance_records').select('date, status').gte('date', format(weekStart, 'yyyy-MM-dd')).lte('date', format(weekEnd, 'yyyy-MM-dd')),
-      ]);
-
-      const total = employeesRes.data?.length || 0;
-      const records = attendanceRes.data || [];
-      const weekly = weeklyRes.data || [];
-
-      const presentCount = records.filter(r => r.status === 'present').length;
-      const lateCount = records.filter(r => r.status === 'late').length;
-      const checkedIn = records.filter(r => r.check_in).length;
-
-      setStats({
-        total,
-        present: presentCount,
-        late: lateCount,
-        absent: total - checkedIn,
-      });
-
-      // Calculate attendance rate
-      const rate = total > 0 ? Math.round((checkedIn / total) * 100) : 0;
-      setAttendanceRate(rate);
-
-      setRecentRecords(records.slice(0, 6));
-
-      // Process weekly data
-      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-      const weeklyStats = days.map((day, index) => {
-        const date = format(new Date(weekStart.getTime() + index * 24 * 60 * 60 * 1000), 'yyyy-MM-dd');
-        const dayRecords = weekly.filter(r => r.date === date);
-        return {
-          day,
-          present: dayRecords.filter(r => r.status === 'present').length,
-          late: dayRecords.filter(r => r.status === 'late').length,
-          absent: Math.max(0, total - dayRecords.length),
+        // Mocking data for now to get the UI working without Supabase
+        const mockStats = {
+          total: 12,
+          present: 8,
+          late: 2,
+          absent: 2
         };
-      });
-      setWeeklyData(weeklyStats);
+        setStats(mockStats);
+        setAttendanceRate(Math.round(((mockStats.present + mockStats.late) / mockStats.total) * 100));
 
-      setLoading(false);
+        // Mock recent records
+        setRecentRecords([
+          { id: '1', user: { full_name: 'John Doe' }, check_in: new Date().toISOString(), status: 'present' },
+          { id: '2', user: { full_name: 'Jane Smith' }, check_in: new Date().toISOString(), status: 'late' },
+        ]);
+
+        // Mock weekly data
+        setWeeklyData([
+          { day: 'Mon', present: 10, late: 1, absent: 1 },
+          { day: 'Tue', present: 9, late: 2, absent: 1 },
+          { day: 'Wed', present: 11, late: 0, absent: 1 },
+          { day: 'Thu', present: 8, late: 3, absent: 1 },
+          { day: 'Fri', present: 10, late: 1, absent: 1 },
+        ]);
+
+      } catch (error) {
+        console.error("Error fetching dashboard data", error);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchData();
   }, []);
@@ -289,11 +275,11 @@ export default function AdminDashboard() {
                       <div key={r.id} className="flex items-center gap-3 group">
                         <Avatar className="w-10 h-10 border-2 border-background shadow-sm transition-transform group-hover:scale-105">
                           <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-primary text-xs font-bold">
-                            {r.profiles?.full_name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
+                            {r.user?.full_name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold truncate text-foreground/90">{r.profiles?.full_name}</p>
+                          <p className="text-sm font-semibold truncate text-foreground/90">{r.user?.full_name}</p>
                           <p className="text-xs text-muted-foreground flex items-center gap-1">
                             {r.check_in ? format(new Date(r.check_in), 'hh:mm a') : 'Not checked in'}
                             <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />

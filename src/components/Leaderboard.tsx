@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Trophy, Medal, Crown, Flame } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
+import client from '@/api/client';
 
 interface LeaderboardEntry {
     id: string;
@@ -16,14 +16,33 @@ export function Leaderboard() {
     const { data: leaders = [], isLoading } = useQuery({
         queryKey: ['leaderboard'],
         queryFn: async () => {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select('id, full_name, avatar_url, current_streak, total_attendance')
-                .order('current_streak', { ascending: false })
-                .limit(5);
-
-            if (error) throw error;
-            return data as LeaderboardEntry[];
+            try {
+                // TODO: Implement /api/leaderboard endpoint
+                // Mock data for now
+                return [
+                    {
+                        id: '1',
+                        full_name: 'John Doe',
+                        current_streak: 10,
+                        total_attendance: 50
+                    },
+                    {
+                        id: '2',
+                        full_name: 'Jane Smith',
+                        current_streak: 8,
+                        total_attendance: 45
+                    },
+                    {
+                        id: '3',
+                        full_name: 'Bob Johnson',
+                        current_streak: 5,
+                        total_attendance: 40
+                    }
+                ] as LeaderboardEntry[];
+            } catch (error) {
+                console.error("Error fetching leaderboard", error);
+                return [];
+            }
         },
     });
 

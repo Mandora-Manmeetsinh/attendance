@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { AchievementType } from '@/components/AchievementBadge';
+import client from '@/api/client';
 
 export interface Achievement {
     id: string;
@@ -21,31 +21,33 @@ export function useAchievements() {
         queryFn: async () => {
             if (!user) return [];
 
-            // Fetch all available achievements
-            // Casting to any to avoid type errors until migration is run and types are regenerated
-            const { data: allAchievements, error: achievementsError } = await (supabase
-                .from('achievements' as any)
-                .select('*') as any);
-
-            if (achievementsError) throw achievementsError;
-
-            // Fetch user's unlocked achievements
-            const { data: userAchievements, error: userAchievementsError } = await (supabase
-                .from('user_achievements' as any)
-                .select('achievement_id, unlocked_at')
-                .eq('user_id', user.id) as any);
-
-            if (userAchievementsError) throw userAchievementsError;
-
-            // Merge data
-            const unlockedMap = new Map(
-                (userAchievements as any[]).map(ua => [ua.achievement_id, ua.unlocked_at])
-            );
-
-            return (allAchievements as any[]).map(achievement => ({
-                ...achievement,
-                unlocked_at: unlockedMap.get(achievement.id),
-            })) as Achievement[];
+            try {
+                // TODO: Implement /api/achievements endpoint
+                // Mock data for now
+                return [
+                    {
+                        id: '1',
+                        type: 'streak_7',
+                        title: 'Week Warrior',
+                        description: 'Attended for 7 consecutive days',
+                        icon_name: 'flame',
+                        color: 'text-orange-500',
+                        unlocked_at: new Date().toISOString()
+                    },
+                    {
+                        id: '2',
+                        type: 'early_bird',
+                        title: 'Early Bird',
+                        description: 'Checked in before 8 AM',
+                        icon_name: 'sun',
+                        color: 'text-yellow-500',
+                        unlocked_at: null
+                    }
+                ] as Achievement[];
+            } catch (error) {
+                console.error("Error fetching achievements", error);
+                return [];
+            }
         },
         enabled: !!user,
     });

@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { StatusBadge } from '@/components/StatusBadge';
 import { StatCard } from '@/components/StatCard';
 import { useAuth } from '@/hooks/useAuth';
-import { supabase } from '@/integrations/supabase/client';
+import client from '@/api/client';
 import {
   Calendar,
   Loader2,
@@ -30,7 +30,7 @@ import { AttendanceCalendar } from '@/components/AttendanceCalendar';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 
 interface AttendanceRecord {
-  id: string;
+  _id: string;
   date: string;
   check_in: string | null;
   check_out: string | null;
@@ -52,18 +52,16 @@ export default function History() {
       const startDate = format(startOfMonth(currentDate), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(currentDate), 'yyyy-MM-dd');
 
-      const { data, error } = await supabase
-        .from('attendance_records')
-        .select('id, date, check_in, check_out, status, distance_at_check_in')
-        .eq('profile_id', profile.id)
-        .gte('date', startDate)
-        .lte('date', endDate)
-        .order('date', { ascending: false });
-
-      if (!error && data) {
-        setRecords(data);
+      try {
+        const { data } = await client.get(`/attendance/history?startDate=${startDate}&endDate=${endDate}`);
+        if (data) {
+          setRecords(data);
+        }
+      } catch (error) {
+        console.error("Error fetching history", error);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchHistory();
@@ -188,7 +186,7 @@ export default function History() {
                     </TableHeader>
                     <TableBody>
                       {records.map((record) => (
-                        <TableRow key={record.id} className="hover:bg-muted/30 transition-colors">
+                        <TableRow key={record._id} className="hover:bg-muted/30 transition-colors">
                           <TableCell>
                             <div className="font-medium">{format(parseISO(record.date), 'MMM d, yyyy')}</div>
                             <div className="text-xs text-muted-foreground">{format(parseISO(record.date), 'EEEE')}</div>

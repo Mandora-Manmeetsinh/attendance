@@ -65,17 +65,13 @@ export default function Auth() {
     }
 
     setIsLoading(true);
-    const { error } = await signIn(loginEmail, loginPassword);
-    setIsLoading(false);
-
-    if (error) {
-      if (error.message.includes('Invalid login credentials')) {
-        toast.error('Invalid email or password');
-      } else {
-        toast.error(error.message);
-      }
-    } else {
-      toast.success('Welcome back! 🎉');
+    try {
+      await signIn(loginEmail, loginPassword);
+      // Success toast is handled in useAuth
+    } catch (error: any) {
+      // Error toast is handled in useAuth
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -93,17 +89,13 @@ export default function Auth() {
     }
 
     setIsLoading(true);
-    const { error } = await signUp(signupEmail, signupPassword, signupName);
-    setIsLoading(false);
-
-    if (error) {
-      if (error.message.includes('already registered')) {
-        toast.error('This email is already registered');
-      } else {
-        toast.error(error.message);
-      }
-    } else {
-      toast.success('Account created successfully! 🎊');
+    try {
+      await signUp(signupEmail, signupPassword, signupName);
+      // Success toast is handled in useAuth
+    } catch (error: any) {
+      // Error toast is handled in useAuth
+    } finally {
+      setIsLoading(false);
     }
   };
 

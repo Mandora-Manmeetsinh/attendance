@@ -6,7 +6,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { LiveClock } from '@/components/LiveClock';
 import { useAuth } from '@/hooks/useAuth';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { supabase } from '@/integrations/supabase/client';
+import client from '@/api/client';
 import {
   MapPin,
   LogIn,
@@ -29,7 +29,7 @@ import { StreakCounter } from '@/components/StreakCounter';
 import { AnimatedBackground } from '@/components/AnimatedBackground';
 
 interface TodayAttendance {
-  id: string;
+  _id: string;
   check_in: string | null;
   check_out: string | null;
   status: string;
@@ -37,7 +37,7 @@ interface TodayAttendance {
 }
 
 export default function CheckInOut() {
-  const { profile, session } = useAuth();
+  const { profile } = useAuth();
   const { getCurrentPosition, loading: geoLoading, error: geoError } = useGeolocation();
   const [todayRecord, setTodayRecord] = useState<TodayAttendance | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,18 +50,14 @@ export default function CheckInOut() {
   const fetchTodayAttendance = async () => {
     if (!profile) return;
 
-    const today = new Date().toISOString().split('T')[0];
-    const { data, error } = await supabase
-      .from('attendance_records')
-      .select('id, check_in, check_out, status, distance_at_check_in')
-      .eq('profile_id', profile.id)
-      .eq('date', today)
-      .maybeSingle();
-
-    if (!error && data) {
+    try {
+      const { data } = await client.get('/attendance/today');
       setTodayRecord(data);
+    } catch (error) {
+      console.error('Error fetching attendance:', error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
@@ -74,47 +70,16 @@ export default function CheckInOut() {
     setActionLoading(true);
 
     try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !sessionData.session) {
-        toast.error('Session expired. Please log in again.');
-        return;
-      }
-
       const position = await getCurrentPosition();
 
-      const { data, error } = await supabase.functions.invoke('process-attendance', {
-        body: {
-          action,
-          latitude: position.latitude,
-          longitude: position.longitude,
-        },
+      const endpoint = action === 'check_in' ? '/attendance/check-in' : '/attendance/check-out';
+
+      const { data } = await client.post(endpoint, {
+        latitude: position.latitude,
+        longitude: position.longitude,
       });
 
-      if (error) {
-        let errorMessage = 'Failed to process attendance';
-        let distance: number | undefined;
-
-        try {
-          const errorBody = await error.context?.json?.();
-          if (errorBody?.error) {
-            errorMessage = errorBody.error;
-            distance = errorBody.distance;
-          }
-        } catch {
-          errorMessage = error.message || errorMessage;
-        }
-
-        toast.error(errorMessage, {
-          description: distance ? `You are ${distance}m from the office` : undefined,
-        });
-        return;
-      }
-
-      if (data?.error) {
-        toast.error(data.error, {
-          description: data.distance ? `You are ${data.distance}m from the office` : undefined,
-        });
-      } else if (data?.success) {
+      if (data?.success) {
         if (action === 'check_in') {
           setShowConfetti(true);
           toast.success(data.message, {
@@ -129,7 +94,12 @@ export default function CheckInOut() {
       }
     } catch (error: any) {
       console.error('Attendance error:', error);
-      toast.error(error.message || 'Failed to process attendance');
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Failed to process attendance';
+      const distance = error.response?.data?.distance;
+
+      toast.error(errorMessage, {
+        description: distance ? `You are ${distance}m from the office` : undefined,
+      });
     } finally {
       setActionLoading(false);
     }

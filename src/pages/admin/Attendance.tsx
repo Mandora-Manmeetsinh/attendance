@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { StatusBadge } from '@/components/StatusBadge';
-import { supabase } from '@/integrations/supabase/client';
+import client from '@/api/client';
 import {
   Download,
   Loader2,
@@ -43,15 +43,35 @@ export default function AdminAttendance() {
 
   const fetchRecords = async () => {
     setLoading(true);
-    const { data } = await supabase
-      .from('attendance_records')
-      .select('*, profiles(full_name, email)')
-      .gte('date', startDate)
-      .lte('date', endDate)
-      .order('date', { ascending: false })
-      .order('check_in', { ascending: false });
-    setRecords(data || []);
-    setLoading(false);
+    try {
+      // TODO: Implement /api/admin/attendance endpoint
+      // Mocking data for now
+      const mockRecords = [
+        {
+          _id: '1',
+          date: new Date().toISOString(),
+          user: { full_name: 'John Doe', email: 'john@example.com' },
+          check_in: new Date().toISOString(),
+          check_out: null,
+          distance_at_check_in: 50,
+          status: 'present'
+        },
+        {
+          _id: '2',
+          date: new Date().toISOString(),
+          user: { full_name: 'Jane Smith', email: 'jane@example.com' },
+          check_in: new Date().toISOString(),
+          check_out: new Date().toISOString(),
+          distance_at_check_in: 120,
+          status: 'late'
+        }
+      ];
+      setRecords(mockRecords);
+    } catch (error) {
+      console.error("Error fetching attendance records", error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchRecords(); }, [startDate, endDate]);
@@ -59,15 +79,8 @@ export default function AdminAttendance() {
   const handleExport = async () => {
     setExporting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('export-attendance', { body: {} });
-      if (error) throw error;
-      const blob = new Blob([data], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `attendance-${format(new Date(), 'yyyy-MM-dd')}.csv`;
-      a.click();
-      toast.success('Export successful!', { description: 'Your CSV file has been downloaded.' });
+      // TODO: Implement export endpoint
+      toast.info('Export functionality coming soon!');
     } catch (error) {
       toast.error('Export failed', { description: 'Please try again later.' });
     } finally {
@@ -78,8 +91,8 @@ export default function AdminAttendance() {
   const filteredRecords = records.filter(r => {
     const matchesStatus = statusFilter === 'all' || r.status === statusFilter;
     const matchesSearch = !searchTerm ||
-      r.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase());
+      r.user?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      r.user?.email?.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesStatus && matchesSearch;
   });
 
@@ -257,7 +270,7 @@ export default function AdminAttendance() {
                   </TableHeader>
                   <TableBody>
                     {filteredRecords.map((r) => (
-                      <TableRow key={r.id} className="hover:bg-muted/30 transition-colors">
+                      <TableRow key={r._id} className="hover:bg-muted/30 transition-colors">
                         <TableCell>
                           <div className="font-medium">{format(new Date(r.date), 'MMM d, yyyy')}</div>
                           <div className="text-xs text-muted-foreground">{format(new Date(r.date), 'EEEE')}</div>
@@ -266,12 +279,12 @@ export default function AdminAttendance() {
                           <div className="flex items-center gap-3">
                             <Avatar className="w-8 h-8 border border-border">
                               <AvatarFallback className="bg-gradient-to-br from-primary to-indigo-600 text-white text-xs font-bold">
-                                {getInitials(r.profiles?.full_name)}
+                                {getInitials(r.user?.full_name)}
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <p className="font-medium text-sm text-foreground">{r.profiles?.full_name}</p>
-                              <p className="text-xs text-muted-foreground">{r.profiles?.email}</p>
+                              <p className="font-medium text-sm text-foreground">{r.user?.full_name}</p>
+                              <p className="text-xs text-muted-foreground">{r.user?.email}</p>
                             </div>
                           </div>
                         </TableCell>

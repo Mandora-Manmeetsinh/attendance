@@ -15,16 +15,14 @@ export const sendAttendanceAlert = async (user, type, data) => {
     }
 
     try {
-        // Find the corresponding Telegram user using studentId
-        // In this system, studentId is likely the link. 
-        // Note: For 'employee' role, we might need a different lookup if they don't have studentId,
-        // but based on bot registration they use studentId.
         const telegramUser = await TelegramUser.findOne({ studentId: user.studentId || user.email });
 
         if (!telegramUser) {
-            console.log(`[Notification Service] No Telegram registration found for user: ${user.full_name}`);
+            console.log(`[Notification Service] Skipping alert: No Telegram registration found for user ${user.full_name} (Search key: ${user.studentId || user.email})`);
             return;
         }
+
+        console.log(`[Notification Service] Attempting to send ${type} alert to ${user.full_name} (Chat ID: ${telegramUser.telegramChatId})`);
 
         let message = '';
 
@@ -40,6 +38,12 @@ export const sendAttendanceAlert = async (user, type, data) => {
                     `Hello ${user.full_name},\n` +
                     `You checked in late today at ${data.checkInTime}. (Shift start: ${data.shiftStart})\n` +
                     `Please try to be on time tomorrow!`;
+                break;
+            case 'CHECK_IN':
+                message = `✅ *Check-in Confirmed*\n\n` +
+                    `Hello ${user.full_name},\n` +
+                    `You have successfully checked in today at ${data.checkInTime}.\n` +
+                    `Have a productive day!`;
                 break;
             default:
                 message = `📢 *Attendance Notification*\n\nHello ${user.full_name}, you have a new attendance update.`;

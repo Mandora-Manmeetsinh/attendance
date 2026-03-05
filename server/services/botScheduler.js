@@ -4,7 +4,7 @@ import { getBotInstance } from './telegramBot.js';
 
 export const initBotScheduler = () => {
     // Schedule times: 9:00 AM, 12:00 PM, 3:00 PM, 6:00 PM
-    const alertTimes = ['0 9 * * *', '0 12 * * *', '0 15 * * *', '0 18 * * *'];
+    const alertTimes = ['0 10 * * *', '0 13 * * *', '0 16 * * *', '0 18 * * *'];
 
     alertTimes.forEach(time => {
         cron.schedule(time, async () => {
@@ -13,7 +13,7 @@ export const initBotScheduler = () => {
         });
     });
 
-    console.log('[Bot Scheduler] Attendance notifications scheduled (9AM, 12PM, 3PM, 6PM)');
+    console.log('[Bot Scheduler] Attendance notifications scheduled (10AM, 1PM, 4PM, 6PM)');
 };
 
 const sendAttendanceUpdates = async () => {

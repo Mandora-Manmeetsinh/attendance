@@ -11,9 +11,6 @@ const generateToken = (id) => {
     });
 };
 
-// @desc    Auth user & get token
-// @route   POST /api/auth/login
-// @access  Public
 router.post('/login', async (req, res) => {
     const { email, password } = req.body;
 
@@ -39,20 +36,12 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// @desc    Register a new user (DISABLED - Admin only)
-// @route   POST /api/auth/register
-// @access  DISABLED - Use admin panel to create users
 router.post('/register', async (req, res) => {
-    // PUBLIC REGISTRATION DISABLED
-    // Only admins can create users via /api/admin/users
     res.status(403).json({
         message: 'Public registration is disabled. Please contact your administrator.'
     });
 });
 
-// @desc    Get user profile
-// @route   GET /api/auth/profile
-// @access  Private
 router.get('/profile', protect, async (req, res) => {
     const user = await User.findById(req.user._id);
 
@@ -76,9 +65,6 @@ router.get('/profile', protect, async (req, res) => {
     }
 });
 
-// @desc    Change password (for first-login or user-initiated)
-// @route   POST /api/auth/change-password
-// @access  Private
 router.post('/change-password', protect, async (req, res) => {
     const { currentPassword, newPassword } = req.body;
 
@@ -89,21 +75,15 @@ router.post('/change-password', protect, async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Validate new password
         if (!newPassword || newPassword.length < 6) {
             return res.status(400).json({ message: 'New password must be at least 6 characters' });
         }
-
-        // For first-login, currentPassword is the temp password
-        // For regular password change, verify current password
         if (!user.must_change_password && currentPassword) {
             const isMatch = await user.matchPassword(currentPassword);
             if (!isMatch) {
                 return res.status(401).json({ message: 'Current password is incorrect' });
             }
         }
-
-        // Update password and clear must_change_password flag
         user.password = newPassword;
         user.must_change_password = false;
         await user.save();

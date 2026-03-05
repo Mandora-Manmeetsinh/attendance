@@ -8,11 +8,16 @@ import officeRoutes from './routes/office.js';
 import adminRoutes from './routes/admin.js';
 import notificationRoutes from './routes/notifications.js';
 import achievementRoutes from './routes/achievements.js';
+import { initTelegramBot } from './services/telegramBot.js';
+import { initBotScheduler } from './services/botScheduler.js';
 import shiftRoutes from './routes/shifts.js';
 
 dotenv.config();
 
-connectDB();
+connectDB().then(() => {
+    initTelegramBot();
+    initBotScheduler();
+});
 
 const app = express();
 
@@ -35,4 +40,4 @@ const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-});
+}); 

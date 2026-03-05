@@ -1,14 +1,13 @@
 import express from 'express';
 import User from '../models/User.js';
 import Attendance from '../models/Attendance.js';
+import SystemSettings from '../models/SystemSettings.js';
 import ExcelJS from 'exceljs';
 import { protect, admin } from '../middleware/authMiddleware.js';
+import { getBotInfo } from '../services/telegramBot.js';
 
 const router = express.Router();
 
-// @desc    Get Dashboard Stats
-// @route   GET /api/admin/dashboard/stats
-// @access  Private/Admin
 router.get('/dashboard/stats', protect, admin, async (req, res) => {
     try {
         const totalEmployees = await User.countDocuments({ role: 'employee' });
@@ -19,9 +18,6 @@ router.get('/dashboard/stats', protect, admin, async (req, res) => {
         const present = attendanceToday.filter(a => a.status === 'present').length;
         const late = attendanceToday.filter(a => a.status === 'late').length;
         const earlyExit = attendanceToday.filter(a => a.status === 'early_exit').length;
-
-        // Absent is total employees minus those who have checked in (present + late + early_exit)
-        // Note: This is a simplification. Real logic might need to check shift days etc.
         const checkedInCount = attendanceToday.length;
         const absent = totalEmployees - checkedInCount;
 
@@ -38,12 +34,8 @@ router.get('/dashboard/stats', protect, admin, async (req, res) => {
     }
 });
 
-// @desc    Get Weekly Attendance Data
-// @route   GET /api/admin/dashboard/weekly
-// @access  Private/Admin
 router.get('/dashboard/weekly', protect, admin, async (req, res) => {
     try {
-        // Get last 7 days
         const weeklyData = [];
         for (let i = 6; i >= 0; i--) {
             const d = new Date();
@@ -67,27 +59,104 @@ router.get('/dashboard/weekly', protect, admin, async (req, res) => {
     }
 });
 
-// @desc    Get All Employees
-// @route   GET /api/admin/employees
-// @access  Private/Admin
+router.get('/dashboard/top-performers', protect, admin, async (req, res) => {
+    try {
+        const topUsers = await User.find({ role: { $ne: 'admin' } })
+            .sort({ current_streak: -1 })
+            .limit(3)
+            .select('full_name current_streak total_attendance');
+
+        const formatted = topUsers.map(user => ({
+            id: user._id,
+            name: user.full_name,
+            streak: user.current_streak || 0,
+            attendance: user.total_attendance || 0,
+            score: Math.min(100, Math.round(((user.current_streak || 0) / 30) * 100))
+        }));
+
+        res.json(formatted);
+    } catch (error) {
+        console.error('Error fetching top performers:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+router.get('/dashboard/activity', protect, admin, async (req, res) => {
+    try {
+        const today = new Date().toISOString().split('T')[0];
+        const recentAttendance = await Attendance.find({ date: today })
+            .sort({ updatedAt: -1 })
+            .limit(5)
+            .populate('user', 'full_name email');
+
+        const activity = recentAttendance.map(record => ({
+            id: record._id,
+            user: record.user,
+            status: record.check_out ? 'checked_out' : 'checked_in',
+            time: record.check_out || record.check_in,
+            check_in: record.check_in,
+            check_out: record.check_out
+        }));
+
+        res.json(activity);
+    } catch (error) {
+        console.error('Error fetching activity:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+router.get('/settings/:key', protect, admin, async (req, res) => {
+    try {
+        const settings = await SystemSettings.findOne({ key: req.params.key });
+        res.json(settings ? settings.value : {});
+    } catch (error) {
+        console.error('Error fetching settings:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
+router.post('/settings/:key', protect, admin, async (req, res) => {
+    try {
+        const { key } = req.params;
+        const value = req.body;
+
+        const settings = await SystemSettings.findOneAndUpdate(
+            { key },
+            {
+                key,
+                value,
+                updatedBy: req.user._id
+            },
+            { new: true, upsert: true } // Create if not exists
+        );
+
+        res.json(settings.value);
+    } catch (error) {
+        console.error('Error updating settings:', error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+});
+
 router.get('/employees', protect, admin, async (req, res) => {
     try {
         const employees = await User.find({}).select('-password').sort({ createdAt: -1 });
-        res.json(employees);
+
+        const botInfo = getBotInfo();
+        const formatted = employees.map(user => {
+            const userObj = user.toObject();
+            if (userObj.studentId && botInfo) {
+                userObj.telegram_link = `https://t.me/${botInfo.username}?start=${userObj.studentId}`;
+            }
+            return userObj;
+        });
+
+        res.json(formatted);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error' });
     }
 });
 
-// ============================================
-// NEW: Admin User Provisioning Endpoints
-// ============================================
-
-/**
- * Helper: Generate temporary password
- * Creates a random 8-character password
- */
 function generateTempPassword() {
     const chars = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
     let password = '';
@@ -97,10 +166,6 @@ function generateTempPassword() {
     return password;
 }
 
-/**
- * Helper: Get shift times based on role and batch
- * Auto-assigns appropriate shift schedule
- */
 function getShiftForRole(role, batch) {
     if (role === 'employee') {
         return { shift_start: '10:30:00', shift_end: '18:30:00' };
@@ -111,28 +176,20 @@ function getShiftForRole(role, batch) {
             return { shift_start: '15:00:00', shift_end: '18:00:00' };
         }
     }
-    // Default fallback
     return { shift_start: '09:00:00', shift_end: '18:00:00' };
 }
 
-// @desc    Create a new user (Admin only)
-// @route   POST /api/admin/users
-// @access  Private/Admin
 router.post('/users', protect, admin, async (req, res) => {
-    const { full_name, email, role, batch } = req.body;
+    const { full_name, email, role, batch, phone_number, studentId } = req.body;
 
     try {
-        // Validate required fields
         if (!full_name || !email) {
             return res.status(400).json({ message: 'Name and email are required' });
         }
-
-        // Validate role
         if (!role || !['employee', 'intern'].includes(role)) {
             return res.status(400).json({ message: 'Role must be employee or intern' });
         }
 
-        // Validate batch for interns
         if (role === 'intern' && !batch) {
             return res.status(400).json({ message: 'Batch is required for interns (batch1 or batch2)' });
         }
@@ -141,35 +198,41 @@ router.post('/users', protect, admin, async (req, res) => {
             return res.status(400).json({ message: 'Batch must be batch1 or batch2' });
         }
 
-        // Check if user already exists
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ message: 'A user with this email already exists' });
         }
 
-        // Generate temporary password
-        const tempPassword = generateTempPassword();
+        if (studentId) {
+            const existingStudent = await User.findOne({ studentId });
+            if (existingStudent) {
+                return res.status(400).json({ message: 'This Student ID is already assigned to another user' });
+            }
+        }
 
-        // Get shift times based on role/batch
+        const tempPassword = generateTempPassword();
         const { shift_start, shift_end } = getShiftForRole(role, batch);
 
-        // Create user
         const user = await User.create({
             full_name,
             email,
-            password: tempPassword, // Will be hashed by pre-save hook
+            password: tempPassword,
             role,
             batch: role === 'intern' ? batch : null,
             shift_start,
             shift_end,
+            phone_number: phone_number || '',
+            wfh_enabled: req.body.wfh_enabled || false, // [NEW]
+            studentId: studentId || '',
             must_change_password: true,
             temp_password_created_at: new Date(),
         });
 
-        // Return user info with temp password (admin will share this with user)
         res.status(201).json({
             success: true,
             message: 'User created successfully',
+            temporary_password: tempPassword,
+            instructions: 'Share this temporary password with the user. They will be required to change it on first login.',
             user: {
                 _id: user._id,
                 full_name: user.full_name,
@@ -178,10 +241,10 @@ router.post('/users', protect, admin, async (req, res) => {
                 batch: user.batch,
                 shift_start: user.shift_start,
                 shift_end: user.shift_end,
+                phone_number: user.phone_number,
+                studentId: user.studentId,
+                telegram_link: getBotInfo() ? `https://t.me/${getBotInfo().username}?start=${user.studentId}` : null,
             },
-            // IMPORTANT: Show temp password to admin ONCE - they must share it with user
-            temporary_password: tempPassword,
-            instructions: 'Share this temporary password with the user. They will be required to change it on first login.',
         });
     } catch (error) {
         console.error('Error creating user:', error);
@@ -189,11 +252,8 @@ router.post('/users', protect, admin, async (req, res) => {
     }
 });
 
-// @desc    Update user role/batch (Admin only)
-// @route   PUT /api/admin/users/:id
-// @access  Private/Admin
 router.put('/users/:id', protect, admin, async (req, res) => {
-    const { full_name, role, batch } = req.body;
+    const { full_name, role, batch, studentId } = req.body;
 
     try {
         const user = await User.findById(req.params.id);
@@ -202,26 +262,31 @@ router.put('/users/:id', protect, admin, async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Don't allow modifying admin users
         if (user.role === 'admin') {
             return res.status(403).json({ message: 'Cannot modify admin users' });
         }
 
-        // Update fields
         if (full_name) user.full_name = full_name;
+        if (studentId) user.studentId = studentId;
         if (role && ['employee', 'intern'].includes(role)) {
             user.role = role;
-            // Update shift when role changes
             const { shift_start, shift_end } = getShiftForRole(role, batch || user.batch);
             user.shift_start = shift_start;
             user.shift_end = shift_end;
         }
         if (batch && ['batch1', 'batch2'].includes(batch)) {
             user.batch = batch;
-            // Update shift when batch changes
             const { shift_start, shift_end } = getShiftForRole(user.role, batch);
             user.shift_start = shift_start;
             user.shift_end = shift_end;
+        }
+
+        if (req.body.wfh_enabled !== undefined) {
+            user.wfh_enabled = req.body.wfh_enabled;
+        }
+
+        if (req.body.phone_number !== undefined) {
+            user.phone_number = req.body.phone_number;
         }
 
         await user.save();
@@ -237,6 +302,9 @@ router.put('/users/:id', protect, admin, async (req, res) => {
                 batch: user.batch,
                 shift_start: user.shift_start,
                 shift_end: user.shift_end,
+                phone_number: user.phone_number,
+                studentId: user.studentId,
+                telegram_link: getBotInfo() ? `https://t.me/${getBotInfo().username}?start=${user.studentId}` : null,
             },
         });
     } catch (error) {
@@ -245,9 +313,6 @@ router.put('/users/:id', protect, admin, async (req, res) => {
     }
 });
 
-// @desc    Reset user password (Admin only)
-// @route   POST /api/admin/users/:id/reset-password
-// @access  Private/Admin
 router.post('/users/:id/reset-password', protect, admin, async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
@@ -256,12 +321,9 @@ router.post('/users/:id/reset-password', protect, admin, async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Don't allow resetting admin passwords
         if (user.role === 'admin') {
             return res.status(403).json({ message: 'Cannot reset admin passwords' });
         }
-
-        // Generate new temp password
         const tempPassword = generateTempPassword();
 
         user.password = tempPassword;
@@ -281,9 +343,6 @@ router.post('/users/:id/reset-password', protect, admin, async (req, res) => {
     }
 });
 
-// @desc    Delete user (Admin only)
-// @route   DELETE /api/admin/users/:id
-// @access  Private/Admin
 router.delete('/users/:id', protect, admin, async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
@@ -292,7 +351,6 @@ router.delete('/users/:id', protect, admin, async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
 
-        // Don't allow deleting admin users
         if (user.role === 'admin') {
             return res.status(403).json({ message: 'Cannot delete admin users' });
         }
@@ -309,9 +367,6 @@ router.delete('/users/:id', protect, admin, async (req, res) => {
     }
 });
 
-// @desc    Get All Attendance Records with Filtering
-// @route   GET /api/admin/attendance
-// @access  Private/Admin
 router.get('/attendance', protect, admin, async (req, res) => {
     try {
         const { startDate, endDate, shift } = req.query;
@@ -323,12 +378,10 @@ router.get('/attendance', protect, admin, async (req, res) => {
             query.date = startDate;
         }
 
-        // Fetch records and populate user
         let records = await Attendance.find(query)
             .populate('user', 'full_name email role batch')
             .sort({ date: -1, 'user.full_name': 1 });
 
-        // Filter by shift (role/batch) on the server side after population
         if (shift && shift !== 'all') {
             records = records.filter(r => {
                 const user = r.user;
@@ -348,9 +401,6 @@ router.get('/attendance', protect, admin, async (req, res) => {
     }
 });
 
-// @desc    Export Attendance to Excel
-// @route   GET /api/admin/attendance/export
-// @access  Private/Admin
 router.get('/attendance/export', protect, admin, async (req, res) => {
     try {
         const { startDate, endDate, shift } = req.query;
@@ -378,7 +428,6 @@ router.get('/attendance/export', protect, admin, async (req, res) => {
         const workbook = new ExcelJS.Workbook();
         const worksheet = workbook.addWorksheet('Attendance Report');
 
-        // Define columns
         worksheet.columns = [
             { header: 'Date', key: 'date', width: 15 },
             { header: 'Name', key: 'name', width: 25 },
@@ -392,7 +441,6 @@ router.get('/attendance/export', protect, admin, async (req, res) => {
             { header: 'Final Status', key: 'final_status', width: 15 },
         ];
 
-        // Style the header
         worksheet.getRow(1).font = { bold: true };
         worksheet.getRow(1).fill = {
             type: 'pattern',
@@ -432,7 +480,6 @@ router.get('/attendance/export', protect, admin, async (req, res) => {
             interns.forEach(addRecordRow);
         }
 
-        // Set response headers
         res.setHeader(
             'Content-Type',
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'

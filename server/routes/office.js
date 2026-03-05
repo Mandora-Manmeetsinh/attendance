@@ -4,9 +4,6 @@ import { protect, admin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// @desc    Get Office Configuration
-// @route   GET /api/office
-// @access  Private
 router.get('/', protect, async (req, res) => {
     const office = await Office.findOne();
     if (office) {
@@ -16,12 +13,8 @@ router.get('/', protect, async (req, res) => {
     }
 });
 
-// @desc    Create/Update Office Configuration
-// @route   POST /api/office
-// @access  Private/Admin
 router.post('/', protect, admin, async (req, res) => {
     const { name, latitude, longitude, radius_meters, grace_period_mins } = req.body;
-
     let office = await Office.findOne();
 
     if (office) {

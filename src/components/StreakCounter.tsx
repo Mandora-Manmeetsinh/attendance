@@ -1,5 +1,6 @@
 import { Flame, Trophy } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import '@/styles/Components.css';
 
 interface StreakCounterProps {
     streak: number;
@@ -15,49 +16,45 @@ export function StreakCounter({ streak, bestStreak = 0 }: StreakCounterProps) {
     };
 
     const getStreakMessage = () => {
-        if (streak >= 30) return 'Legendary!';
-        if (streak >= 14) return 'On Fire!';
-        if (streak >= 7) return 'Great Job!';
-        if (streak >= 3) return 'Keep Going!';
-        return 'Start Your Streak!';
+        if (streak >= 30) return 'Legendary Performance!';
+        if (streak >= 14) return 'Outstanding Consistency!';
+        if (streak >= 7) return 'Excellent Progress!';
+        if (streak >= 3) return 'Great Consistency!';
+        return 'Ready to Start?';
     };
 
     return (
-        <Card className="card-tilted shadow-coral border-2 border-primary/20 overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-warm opacity-5" />
+        <Card className="streak-card">
             <CardContent className="p-6 relative">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <div className={`relative ${streak > 0 ? 'animate-bounce-slow' : ''}`}>
-                            <Flame className={`w-12 h-12 ${getStreakColor()}`} />
-                            {streak >= 7 && (
-                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full animate-ping" />
-                            )}
+                        <div className="streak-flame-container">
+                            <Flame className={`w-10 h-10 ${getStreakColor()}`} />
                         </div>
                         <div>
-                            <p className="text-sm font-medium text-muted-foreground">Attendance Streak</p>
-                            <div className="flex items-baseline gap-2">
-                                <p className={`text-4xl font-bold ${getStreakColor()}`}>{streak}</p>
-                                <p className="text-lg text-muted-foreground">days</p>
+                            <p className="text-xs font-bold text-muted-foreground uppercase">Day Streak</p>
+                            <div className="flex items-baseline gap-1">
+                                <span className={`streak-number ${getStreakColor()}`}>{streak}</span>
+                                <span className="text-sm text-muted-foreground font-medium">Days</span>
                             </div>
-                            <p className="text-xs font-medium text-primary mt-1">{getStreakMessage()}</p>
+                            <p className="text-[10px] font-bold text-primary mt-1 uppercase tracking-tight">{getStreakMessage()}</p>
                         </div>
                     </div>
                     {bestStreak > 0 && (
                         <div className="text-right">
-                            <div className="flex items-center gap-2 text-muted-foreground mb-1">
-                                <Trophy className="w-4 h-4" />
-                                <p className="text-xs font-medium">Best</p>
+                            <div className="flex items-center justify-end gap-1.5 text-muted-foreground mb-1">
+                                <Trophy className="w-3.5 h-3.5" />
+                                <span className="text-[10px] font-bold uppercase">Best</span>
                             </div>
-                            <p className="text-2xl font-bold text-accent">{bestStreak}</p>
+                            <p className="text-xl font-bold text-foreground">{bestStreak}</p>
                         </div>
                     )}
                 </div>
                 {streak > 0 && (
-                    <div className="mt-4 pt-4 border-t border-border/50">
-                        <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">Keep it up! Don't break the chain 🔥</span>
-                            <span className="font-semibold text-primary">{30 - streak} days to legendary</span>
+                    <div className="mt-4 pt-4 border-t">
+                        <div className="flex items-center justify-between text-[10px]">
+                            <span className="text-muted-foreground">Maintain your daily momentum!</span>
+                            <span className="font-bold text-primary">{30 - streak} Days to Gold</span>
                         </div>
                     </div>
                 )}

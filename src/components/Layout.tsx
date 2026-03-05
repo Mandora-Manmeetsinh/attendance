@@ -16,6 +16,7 @@ import {
 import { useAuth } from '@/hooks/useAuth';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationCenter } from '@/components/NotificationCenter';
+import '@/styles/Layout.css';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -53,14 +54,14 @@ export function Layout({ children }: LayoutProps) {
   const links = isAdmin ? adminLinks : employeeLinks;
 
   return (
-    <div className="min-h-screen bg-background flex flex-col md:flex-row overflow-hidden">
+    <div className="layout-container">
       {/* Mobile Header */}
-      <header className="md:hidden h-16 border-b border-border/50 flex items-center justify-between px-4 bg-card/80 backdrop-blur-md sticky top-0 z-50">
+      <header className="mobile-header">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
             {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
-          <span className="font-bold text-lg bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          <span className="sidebar-brand">
             GeoAttend
           </span>
         </div>
@@ -71,21 +72,15 @@ export function Layout({ children }: LayoutProps) {
       </header>
 
       {/* Sidebar Navigation */}
-      <aside
-        className={`
-          fixed md:sticky top-0 left-0 z-40 h-screen w-64 bg-card border-r border-border/50 
-          transform transition-transform duration-300 ease-in-out
-          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-        `}
-      >
-        <div className="h-full flex flex-col">
-          <div className="h-16 flex items-center px-6 border-b border-border/50">
-            <span className="font-bold text-xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+      <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
+        <div className="sidebar-content">
+          <div className="sidebar-header">
+            <span className="sidebar-brand">
               GeoAttend
             </span>
           </div>
 
-          <div className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
+          <nav className="sidebar-nav">
             {links.map((link) => {
               const Icon = link.icon;
               const isActive = location.pathname === link.href;
@@ -93,38 +88,32 @@ export function Layout({ children }: LayoutProps) {
                 <Link
                   key={link.href}
                   to={link.href}
-                  className={`
-                    flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group
-                    ${isActive
-                      ? 'bg-primary/10 text-primary font-medium shadow-sm'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    }
-                  `}
+                  className={`nav-link ${isActive ? 'active' : ''}`}
                 >
-                  <Icon className={`w-5 h-5 ${isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-foreground'}`} />
+                  <Icon className={`nav-icon ${isActive ? 'active' : ''}`} />
                   {link.label}
                 </Link>
               );
             })}
-          </div>
+          </nav>
 
-          <div className="p-4 border-t border-border/50 space-y-4">
-            <div className="flex items-center gap-3 px-2">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">
+          <div className="sidebar-footer">
+            <div className="user-profile">
+              <div className="user-avatar">
                 {user?.email?.substring(0, 2).toUpperCase()}
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{user?.email}</p>
-                <p className="text-xs text-muted-foreground capitalize">{isAdmin ? 'Administrator' : 'Employee'}</p>
+              <div className="user-info">
+                <p className="user-email">{user?.email}</p>
+                <p className="user-role">{isAdmin ? 'Administrator' : 'Employee'}</p>
               </div>
             </div>
 
             <Button
-              variant="outline"
-              className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/20"
+              variant="ghost"
+              className="w-full justify-start gap-2 nav-link"
               onClick={handleSignOut}
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="nav-icon" />
               Sign Out
             </Button>
           </div>
@@ -133,17 +122,14 @@ export function Layout({ children }: LayoutProps) {
 
       {/* Overlay for mobile sidebar */}
       {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-30 md:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
+        <div className="mobile-overlay" onClick={() => setIsSidebarOpen(false)} />
       )}
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col min-w-0 h-screen overflow-hidden">
+      <main className="main-wrapper">
         {/* Desktop Header */}
-        <header className="hidden md:flex h-16 border-b border-border/50 items-center justify-between px-8 bg-card/50 backdrop-blur-sm sticky top-0 z-20">
-          <h2 className="font-semibold text-lg">
+        <header className="desktop-header">
+          <h2 className="font-semibold text-lg text-foreground">
             {links.find(l => l.href === location.pathname)?.label || 'Dashboard'}
           </h2>
           <div className="flex items-center gap-4">
@@ -153,8 +139,8 @@ export function Layout({ children }: LayoutProps) {
         </header>
 
         {/* Page Content */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth">
-          <div className="mx-auto max-w-6xl animate-fade-in">
+        <div className="content-container">
+          <div className="content-inner">
             {children}
           </div>
         </div>

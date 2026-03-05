@@ -45,6 +45,11 @@ const attendanceSchema = new mongoose.Schema({
         enum: ['present', 'late', 'early_exit', 'absent', 'incomplete', 'halfday'],
         default: 'absent',
     },
+    work_mode: {
+        type: String,
+        enum: ['office', 'wfh'],
+        default: 'office',
+    },
     // NEW: Track total worked time in minutes
     worked_minutes: {
         type: Number,

@@ -18,19 +18,15 @@ import {
   Calendar,
   Timer,
   Fingerprint,
-  Sparkles,
-  ArrowRight,
   Clock,
-  Users,
   Briefcase
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, differenceInMinutes, differenceInHours } from 'date-fns';
 import { Progress } from '@/components/ui/progress';
-import { ConfettiEffect } from '@/components/ConfettiEffect';
 import { StreakCounter } from '@/components/StreakCounter';
-import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { Badge } from '@/components/ui/badge';
+import '@/styles/CheckInOut.css';
 
 interface TodayAttendance {
   _id: string;
@@ -44,7 +40,6 @@ interface TodayAttendance {
   final_status?: string;
 }
 
-// NEW: Shift configuration interface
 interface ShiftConfig {
   role: string;
   batch: string | null;
@@ -75,13 +70,12 @@ export default function CheckInOut() {
   const [todayRecord, setTodayRecord] = useState<TodayAttendance | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
   const [shiftConfig, setShiftConfig] = useState<ShiftConfig | null>(null);
   const [shiftLoading, setShiftLoading] = useState(true);
+  const [workMode, setWorkMode] = useState<'office' | 'wfh'>('office');
 
   const streak = profile?.current_streak || 0;
 
-  // NEW: Fetch shift configuration
   const fetchShiftConfig = async () => {
     try {
       const { data } = await client.get('/shifts/my-shift');
@@ -95,7 +89,6 @@ export default function CheckInOut() {
 
   const fetchTodayAttendance = async () => {
     if (!profile) return;
-
     try {
       const { data } = await client.get('/attendance/today');
       setTodayRecord(data);
@@ -115,38 +108,28 @@ export default function CheckInOut() {
 
   const handleAttendance = async (action: 'check_in' | 'check_out') => {
     setActionLoading(true);
-
     try {
-      const position = await getCurrentPosition();
+      let position = { latitude: 0, longitude: 0 };
+      try {
+        position = await getCurrentPosition();
+      } catch (err) {
+        if (workMode === 'office') throw err;
+      }
 
       const endpoint = action === 'check_in' ? '/attendance/check-in' : '/attendance/check-out';
-
       const { data } = await client.post(endpoint, {
         latitude: position.latitude,
         longitude: position.longitude,
+        work_mode: workMode,
       });
 
       if (data?.success) {
-        if (action === 'check_in') {
-          setShowConfetti(true);
-          toast.success(data.message, {
-            description: 'Have a productive day! 🎉',
-          });
-        } else {
-          toast.success(data.message, {
-            description: 'See you tomorrow! 👋',
-          });
-        }
+        toast.success(data.message);
         fetchTodayAttendance();
       }
     } catch (error: any) {
-      console.error('Attendance error:', error);
-      const errorMessage = error.response?.data?.error || error.response?.data?.message || error.message || 'Failed to process attendance';
-      const distance = error.response?.data?.distance;
-
-      toast.error(errorMessage, {
-        description: distance ? `You are ${distance}m from the office` : undefined,
-      });
+      const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Failed to process attendance';
+      toast.error(errorMessage);
     } finally {
       setActionLoading(false);
     }
@@ -181,357 +164,202 @@ export default function CheckInOut() {
 
   return (
     <Layout>
-      <ConfettiEffect active={showConfetti} onComplete={() => setShowConfetti(false)} />
-      <div className="relative z-0">
-        <AnimatedBackground />
-      </div>
-
-      <div className="max-w-6xl mx-auto space-y-8 relative z-10">
-        {/* Header Section */}
-        <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-          <div className="space-y-2 animate-slide-up">
-            <div className="flex items-center gap-2 text-primary font-medium">
-              <Sparkles className="w-4 h-4 animate-pulse-soft" />
-              <span>
-                Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'}
-              </span>
-            </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-foreground tracking-tight">
-              {profile?.full_name?.split(' ')[0]}
-              <span className="text-primary">.</span>
-            </h1>
-            <p className="text-muted-foreground flex items-center gap-2 text-lg">
-              <Calendar className="w-5 h-5 text-accent" />
+      <div className="check-in-container">
+        <div className="check-in-header">
+          <div className="header-user-info">
+            <p className="greeting-text">
+              Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'}
+            </p>
+            <h1 className="user-full-name">{profile?.full_name}</h1>
+            <p className="current-date">
+              <Calendar className="w-5 h-5" />
               {format(new Date(), 'EEEE, MMMM d, yyyy')}
             </p>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 animate-scale-in">
-            <Card className="shadow-coral border-primary/20 bg-card/50 backdrop-blur-sm min-w-[200px]">
+          <div className="header-actions">
+            {profile?.wfh_enabled && (
+              <Card className={`work-mode-card ${workMode === 'wfh' ? 'active' : ''}`}
+                onClick={() => setWorkMode(prev => prev === 'office' ? 'wfh' : 'office')}>
+                <CardContent className="p-4 flex flex-col justify-center">
+                  <p className="text-xs font-semibold uppercase text-muted-foreground">Mode</p>
+                  <p className="text-lg font-bold">{workMode === 'wfh' ? 'Remote 🏠' : 'Office 🏢'}</p>
+                </CardContent>
+              </Card>
+            )}
+
+            <Card className="time-card">
               <CardContent className="p-4 flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase">Current Time</p>
-                  <div className="text-2xl font-bold text-primary font-mono">
+                  <p className="text-xs font-semibold uppercase text-muted-foreground">Current Time</p>
+                  <div className="live-clock-text">
                     <LiveClock showSeconds />
                   </div>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Timer className="w-5 h-5 text-primary" />
-                </div>
+                <Timer className="w-6 h-6 text-primary" />
               </CardContent>
             </Card>
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Left Column - Main Actions */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Action Card */}
-            <Card className={`
-              relative overflow-hidden border-2 transition-all duration-500
-              ${isComplete ? 'border-success/30 bg-success/5 shadow-glow-success' :
-                canCheckOut ? 'border-primary/30 bg-primary/5 shadow-glow' :
-                  'border-border/50 shadow-large hover:shadow-glow'
-              }
-            `}>
-              <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary/5 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-
-              <CardHeader className="pb-4 relative">
+        <div className="check-in-main-grid">
+          <div className="action-column">
+            <Card className={`main-action-card ${isComplete ? 'complete' : ''}`}>
+              <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-2xl flex items-center gap-2">
-                      <Navigation className={`w-6 h-6 ${isComplete ? 'text-success' : 'text-primary'}`} />
-                      {isComplete ? 'All Done!' : canCheckOut ? 'Active Shift' : 'Ready to Start?'}
+                      <Navigation className="w-6 h-6 text-primary" />
+                      {isComplete ? 'Attendance Recorded' : canCheckOut ? 'Active Shift' : 'Begin Workday'}
                     </CardTitle>
-                    <CardDescription className="flex items-center gap-2 mt-1">
-                      <MapPin className="w-4 h-4" />
-                      {isComplete ? 'See you tomorrow' : 'Ensure you are within office range'}
+                    <CardDescription>
+                      {isComplete ? 'You are all set for today!' : 'Please check in from the registered office location.'}
                     </CardDescription>
                   </div>
                   {todayRecord && <StatusBadge status={todayRecord.status} />}
                 </div>
               </CardHeader>
 
-              <CardContent className="space-y-6 relative">
+              <CardContent className="space-y-6">
                 {geoError && (
-                  <div className="flex items-start gap-3 p-4 rounded-xl bg-destructive/10 border border-destructive/20 animate-wiggle">
-                    <AlertCircle className="w-5 h-5 text-destructive mt-0.5 shrink-0" />
-                    <div>
-                      <p className="font-medium text-destructive">Location Access Required</p>
-                      <p className="text-sm text-destructive/80 mt-1">{geoError}</p>
-                    </div>
+                  <div className="flex items-center gap-3 p-4 bg-destructive/10 text-destructive rounded-lg border border-destructive/20">
+                    <AlertCircle className="w-5 h-5" />
+                    <p className="text-sm font-medium">{geoError}</p>
                   </div>
                 )}
 
-                <div className="grid sm:grid-cols-2 gap-4">
+                <div className="action-buttons-grid">
                   <Button
                     size="lg"
-                    className={`
-                      h-auto py-8 flex-col gap-3 rounded-2xl transition-all duration-300
-                      ${!canCheckIn
-                        ? 'opacity-50 grayscale'
-                        : 'shadow-coral hover:shadow-lg hover:-translate-y-1 hover:scale-[1.02] gradient-primary'
-                      }
-                    `}
+                    className="check-in-button"
                     disabled={!canCheckIn || actionLoading || geoLoading}
                     onClick={() => handleAttendance('check_in')}
                   >
                     {actionLoading && !todayRecord?.check_in ? (
-                      <Loader2 className="w-8 h-8 animate-spin" />
+                      <Loader2 className="w-6 h-6 animate-spin" />
                     ) : (
-                      <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center shadow-inner">
-                        <LogIn className="w-7 h-7 text-white" />
-                      </div>
+                      <LogIn className="w-6 h-6" />
                     )}
                     <div className="text-center">
-                      <span className="text-xl font-bold block text-white">Check In</span>
-                      <span className="text-xs text-white/80">Start your workday</span>
+                      <p className="text-lg font-bold">Check In</p>
+                      <p className="text-xs opacity-80">Start tracking time</p>
                     </div>
                   </Button>
 
                   <Button
                     size="lg"
-                    className={`
-                      h-auto py-8 flex-col gap-3 rounded-2xl transition-all duration-300 border-2
-                      ${!canCheckOut
-                        ? 'opacity-50 grayscale bg-muted'
-                        : 'bg-card hover:bg-accent/5 border-accent text-accent hover:shadow-teal hover:-translate-y-1 hover:scale-[1.02]'
-                      }
-                    `}
+                    className="check-out-button"
                     disabled={!canCheckOut || actionLoading || geoLoading}
                     onClick={() => handleAttendance('check_out')}
+                    variant="outline"
                   >
                     {actionLoading && canCheckOut ? (
-                      <Loader2 className="w-8 h-8 animate-spin" />
+                      <Loader2 className="w-6 h-6 animate-spin" />
                     ) : (
-                      <div className={`w-14 h-14 rounded-full flex items-center justify-center shadow-inner ${canCheckOut ? 'bg-accent/10' : 'bg-muted-foreground/10'}`}>
-                        <LogOut className={`w-7 h-7 ${canCheckOut ? 'text-accent' : 'text-muted-foreground'}`} />
-                      </div>
+                      <LogOut className="w-6 h-6 text-primary" />
                     )}
                     <div className="text-center">
-                      <span className={`text-xl font-bold block ${canCheckOut ? 'text-accent' : 'text-muted-foreground'}`}>Check Out</span>
-                      <span className="text-xs text-muted-foreground">End your workday</span>
+                      <p className="text-lg font-bold text-primary">Check Out</p>
+                      <p className="text-xs text-muted-foreground">Complete shift</p>
                     </div>
                   </Button>
                 </div>
 
                 {isComplete && (
-                  <div className="flex items-center gap-4 p-4 rounded-2xl bg-success/10 border border-success/20 animate-scale-in">
-                    <div className="w-10 h-10 rounded-full bg-success flex items-center justify-center shadow-glow-success">
-                      <CheckCircle2 className="w-6 h-6 text-white" />
-                    </div>
+                  <div className="success-callout">
+                    <CheckCircle2 className="w-6 h-6 text-success" />
                     <div>
-                      <p className="font-bold text-success text-lg">Attendance Complete!</p>
-                      <p className="text-sm text-success/80">You've completed your attendance for today. Great work!</p>
+                      <p className="font-bold text-foreground">You've checked out!</p>
+                      <p className="text-sm text-muted-foreground">Rest well and see you tomorrow.</p>
                     </div>
                   </div>
                 )}
               </CardContent>
             </Card>
 
-            {/* Today's Stats Grid */}
-            <div className="grid sm:grid-cols-2 gap-6">
-              <Card className="shadow-soft border-border/50 hover:shadow-medium transition-shadow duration-300">
+            <div className="activity-summary-grid">
+              <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Fingerprint className="w-5 h-5 text-accent" />
-                    Today's Activity
+                    <Fingerprint className="w-4 h-4" /> Activity
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <div className="flex items-center justify-center py-6">
-                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                    </div>
-                  ) : todayRecord ? (
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-success/10 flex items-center justify-center">
-                            <LogIn className="w-4 h-4 text-success" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground">Check In</p>
-                            <p className="font-bold">
-                              {todayRecord.check_in ? format(new Date(todayRecord.check_in), 'hh:mm a') : '—'}
-                            </p>
-                          </div>
-                        </div>
-                        {todayRecord.check_in && <CheckCircle2 className="w-4 h-4 text-success" />}
-                      </div>
-
-                      <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <LogOut className="w-4 h-4 text-primary" />
-                          </div>
-                          <div>
-                            <p className="text-xs font-medium text-muted-foreground">Check Out</p>
-                            <p className="font-bold">
-                              {todayRecord.check_out ? format(new Date(todayRecord.check_out), 'hh:mm a') : '—'}
-                            </p>
-                          </div>
-                        </div>
-                        {todayRecord.check_out && <CheckCircle2 className="w-4 h-4 text-primary" />}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 text-muted-foreground">
-                      <p>No activity yet</p>
-                    </div>
-                  )}
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                    <span className="text-sm text-muted-foreground">Check-in</span>
+                    <span className="font-bold font-mono">
+                      {todayRecord?.check_in ? format(new Date(todayRecord.check_in), 'hh:mm a') : '--:--'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                    <span className="text-sm text-muted-foreground">Check-out</span>
+                    <span className="font-bold font-mono">
+                      {todayRecord?.check_out ? format(new Date(todayRecord.check_out), 'hh:mm a') : '--:--'}
+                    </span>
+                  </div>
                 </CardContent>
               </Card>
 
-              <Card className="shadow-soft border-border/50 hover:shadow-medium transition-shadow duration-300">
+              <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Timer className="w-5 h-5 text-warning" />
-                    Work Progress
+                    <Clock className="w-4 h-4" /> Work Duration
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {workDuration ? (
-                    <div className="space-y-4">
-                      <div className="flex items-end justify-between">
-                        <div>
-                          <p className="text-3xl font-bold text-foreground">
-                            {workDuration.hours}<span className="text-sm text-muted-foreground font-normal ml-1">hrs</span>
-                            {' '}
-                            {workDuration.mins}<span className="text-sm text-muted-foreground font-normal ml-1">mins</span>
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">Total active time</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-2xl font-bold text-primary">{shiftProgress}%</p>
-                          <p className="text-xs text-muted-foreground">Completed</p>
-                        </div>
+                    <div className="progress-section">
+                      <div className="progress-header">
+                        <p className="duration-display">
+                          {workDuration.hours}<span className="duration-suffix">hr</span> {workDuration.mins}<span className="duration-suffix">min</span>
+                        </p>
+                        <p className="text-lg font-bold text-primary">{shiftProgress}%</p>
                       </div>
-                      <Progress value={shiftProgress} className="h-3 rounded-full" />
+                      <Progress value={shiftProgress} className="h-2" />
                     </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
-                      <Timer className="w-8 h-8 mb-2 opacity-20" />
-                      <p>Start your shift to track progress</p>
-                    </div>
+                    <p className="text-sm text-muted-foreground py-4 text-center">Start shift to track duration</p>
                   )}
                 </CardContent>
               </Card>
             </div>
           </div>
 
-          {/* Right Column - Sidebar Info */}
-          <div className="space-y-6">
-            {/* Streak Counter */}
-            <StreakCounter streak={streak} bestStreak={15} />
+          <div className="sidebar-column">
+            <StreakCounter streak={streak} bestStreak={profile?.best_streak || streak} />
 
-            {/* Shift Info - NEW: Dynamic shift config display */}
-            <Card className="shadow-soft border-border/50">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-primary" />
-                    Shift Schedule
-                  </CardTitle>
-                  {shiftConfig && (
-                    <div className="flex gap-2">
-                      <Badge variant={profile?.role === 'intern' ? 'secondary' : 'default'} className="text-xs">
-                        {profile?.role === 'intern' ? (
-                          <><Users className="w-3 h-3 mr-1" /> Intern</>
-                        ) : (
-                          <><Briefcase className="w-3 h-3 mr-1" /> Employee</>
-                        )}
-                      </Badge>
-                      {profile?.batch && (
-                        <Badge variant="outline" className="text-xs">
-                          {profile.batch === 'batch1' ? 'Batch 1' : 'Batch 2'}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2 text-primary">
+                  <Clock className="w-4 h-4" /> Shift Info
+                </CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 {shiftLoading ? (
-                  <div className="flex items-center justify-center py-6">
-                    <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                  </div>
-                ) : shiftConfig?.formatted ? (
-                  <div className="space-y-4">
-                    {/* Check-in Window Status */}
-                    <div className={`p-3 rounded-xl border ${shiftConfig.status.canCheckIn
-                      ? 'bg-success/10 border-success/30'
-                      : shiftConfig.status.isBeforeCheckIn
-                        ? 'bg-warning/10 border-warning/30'
-                        : 'bg-muted/30 border-border/50'
-                      }`}>
-                      <p className="text-xs font-medium text-muted-foreground mb-1">Check-in Window</p>
-                      <p className="font-bold">
-                        {shiftConfig.formatted.check_in_window}
-                      </p>
-                      <p className={`text-xs mt-1 ${shiftConfig.status.canCheckIn ? 'text-success' :
-                        shiftConfig.status.isBeforeCheckIn ? 'text-warning' : 'text-muted-foreground'
-                        }`}>
-                        {shiftConfig.status.canCheckIn
-                          ? '✓ Check-in available now'
-                          : shiftConfig.status.isBeforeCheckIn
-                            ? '⏳ Check-in opens soon'
-                            : '✕ Check-in window closed'}
-                      </p>
+                  <div className="flex justify-center p-4"><Loader2 className="w-5 h-5 animate-spin" /></div>
+                ) : shiftConfig ? (
+                  <>
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-muted-foreground uppercase">Shift Times</p>
+                      <p className="font-bold text-lg">{shiftConfig.formatted.shift_start} — {shiftConfig.formatted.shift_end}</p>
                     </div>
-
-                    {/* Shift Times */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="p-3 rounded-xl bg-muted/30">
-                        <span className="text-xs text-muted-foreground block">Shift Start</span>
-                        <span className="font-bold font-mono">{shiftConfig.formatted.shift_start}</span>
-                      </div>
-                      <div className="p-3 rounded-xl bg-muted/30">
-                        <span className="text-xs text-muted-foreground block">Shift End</span>
-                        <span className="font-bold font-mono">{shiftConfig.formatted.shift_end}</span>
+                    <div className="space-y-1">
+                      <p className="text-xs font-bold text-muted-foreground uppercase">Role/Batch</p>
+                      <div className="flex gap-2 mt-1">
+                        <Badge variant="secondary" className="capitalize">{profile?.role}</Badge>
+                        {profile?.batch && <Badge variant="outline">{profile.batch}</Badge>}
                       </div>
                     </div>
-
-                    {/* Minimum Hours */}
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-primary/5 border border-primary/20">
-                      <span className="text-sm text-muted-foreground">Min. Required</span>
-                      <span className="font-bold text-primary">{shiftConfig.formatted.min_hours} hours</span>
-                    </div>
-
-                    <div className="pt-2">
-                      <Button variant="outline" className="w-full justify-between group" asChild>
-                        <a href="/employee/history">
-                          View History
-                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                        </a>
-                      </Button>
-                    </div>
-                  </div>
+                  </>
                 ) : (
-                  /* Fallback to legacy display if no shift config */
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
-                      <span className="text-sm text-muted-foreground">Start Time</span>
-                      <span className="font-bold font-mono">
-                        {format(new Date(`2000-01-01 ${profile?.shift_start || '09:00:00'}`), 'hh:mm a')}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
-                      <span className="text-sm text-muted-foreground">End Time</span>
-                      <span className="font-bold font-mono">
-                        {format(new Date(`2000-01-01 ${profile?.shift_end || '18:00:00'}`), 'hh:mm a')}
-                      </span>
-                    </div>
-                    <div className="pt-2">
-                      <Button variant="outline" className="w-full justify-between group" asChild>
-                        <a href="/employee/history">
-                          View History
-                          <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                        </a>
-                      </Button>
-                    </div>
-                  </div>
+                  <p className="text-sm text-muted-foreground">No shift assigned yet.</p>
                 )}
+                <Separator />
+                <Button variant="ghost" className="w-full justify-start gap-2" asChild>
+                  <a href="/employee/history">
+                    Full History <Clock className="w-4 h-4 ml-auto" />
+                  </a>
+                </Button>
               </CardContent>
             </Card>
           </div>
@@ -539,4 +367,8 @@ export default function CheckInOut() {
       </div>
     </Layout>
   );
+}
+
+function Separator() {
+  return <div className="h-px bg-border w-full my-4" />;
 }

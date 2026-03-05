@@ -9,7 +9,7 @@ interface Profile {
   full_name: string;
   role: 'admin' | 'employee' | 'intern';
   batch?: 'batch1' | 'batch2' | null;
-  must_change_password?: boolean; // NEW: First-login password change flag
+  must_change_password?: boolean;
   shift_start?: string;
   shift_end?: string;
   current_streak?: number;
@@ -18,10 +18,11 @@ interface Profile {
   late_count?: number;
   notification_preferences?: any;
   avatar_url?: string;
+  wfh_enabled?: boolean;
 }
 
 interface AuthContextType {
-  user: Profile | null; // In MERN, user and profile are often the same object
+  user: Profile | null;
   profile: Profile | null;
   loading: boolean;
   isAdmin: boolean;
@@ -59,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
-      localStorage.removeItem('token'); // Invalid token
+      localStorage.removeItem('token');
       setUser(null);
     } finally {
       setLoading(false);
@@ -102,7 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value = {
     user,
-    profile: user, // Alias for compatibility
+    profile: user,
     loading,
     isAdmin: user?.role === 'admin',
     signIn,

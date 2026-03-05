@@ -15,10 +15,10 @@ import {
   Globe,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { AnimatedBackground } from '@/components/AnimatedBackground';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import '@/styles/Settings.css';
 
 interface Office {
   _id?: string;
@@ -27,6 +27,80 @@ interface Office {
   radius_meters: number;
   grace_period_mins: number;
   name?: string;
+}
+
+function NotificationSettingsPanel() {
+  const [settings, setSettings] = useState({
+    lateAlerts: true,
+    earlyExitAlerts: true,
+    dailySummary: false
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const { data } = await client.get('/admin/settings/notifications');
+        if (data) setSettings({ ...settings, ...data });
+      } catch (error) {
+        console.error("Failed to load notification settings", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, []);
+
+  const updateSetting = async (key: string, value: boolean) => {
+    const newSettings = { ...settings, [key]: value };
+    setSettings(newSettings);
+    try {
+      await client.post('/admin/settings/notifications', newSettings);
+      toast.success("Preference saved");
+    } catch (error) {
+      toast.error("Failed to save preference");
+      setSettings(settings);
+    }
+  };
+
+  if (loading) return <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />;
+
+  return (
+    <div className="notification-panel">
+      <div className="notification-row">
+        <div className="notification-label-group">
+          <Label className="text-base">Late Arrival Alerts</Label>
+          <p className="text-sm text-muted-foreground">Notify admin when an employee is late</p>
+        </div>
+        <Switch
+          checked={settings.lateAlerts}
+          onCheckedChange={(checked) => updateSetting('lateAlerts', checked)}
+        />
+      </div>
+      <Separator />
+      <div className="notification-row">
+        <div className="notification-label-group">
+          <Label className="text-base">Early Exit Alerts</Label>
+          <p className="text-sm text-muted-foreground">Notify admin when an employee leaves early</p>
+        </div>
+        <Switch
+          checked={settings.earlyExitAlerts}
+          onCheckedChange={(checked) => updateSetting('earlyExitAlerts', checked)}
+        />
+      </div>
+      <Separator />
+      <div className="notification-row">
+        <div className="notification-label-group">
+          <Label className="text-base">Daily Summary</Label>
+          <p className="text-sm text-muted-foreground">Receive a daily attendance report via email</p>
+        </div>
+        <Switch
+          checked={settings.dailySummary}
+          onCheckedChange={(checked) => updateSetting('dailySummary', checked)}
+        />
+      </div>
+    </div>
+  );
 }
 
 export default function AdminSettings() {
@@ -50,7 +124,6 @@ export default function AdminSettings() {
         }
       } catch (error) {
         console.error("Error fetching office settings", error);
-        // Don't show error toast on initial load if no office exists yet
       } finally {
         setLoading(false);
       }
@@ -116,32 +189,27 @@ export default function AdminSettings() {
 
   return (
     <Layout>
-      <div className="relative z-0">
-        <AnimatedBackground />
-      </div>
-
-      <div className="space-y-8 relative z-10 max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-slide-up">
+      <div className="settings-container">
+        <div className="settings-header">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">System Settings</h1>
             <p className="text-muted-foreground mt-1 text-lg">Configure your workspace and preferences</p>
           </div>
-          <Button onClick={handleSave} disabled={saving} className="gap-2 shadow-glow-accent hover:scale-105 transition-transform">
+          <Button onClick={handleSave} disabled={saving} className="gap-2">
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             Save Changes
           </Button>
         </div>
 
-        <Tabs defaultValue="general" className="animate-slide-up" style={{ animationDelay: '0.1s' }}>
-          <TabsList className="grid w-full grid-cols-3 lg:w-[400px] mb-6">
+        <Tabs defaultValue="general">
+          <TabsList className="settings-tabs-list">
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="location">Location</TabsTrigger>
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="general" className="space-y-6 animate-scale-in">
-            <Card className="shadow-soft border-border/50">
+          <TabsContent value="general" className="space-y-6">
+            <Card className="settings-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Settings className="w-5 h-5 text-primary" />
@@ -149,8 +217,8 @@ export default function AdminSettings() {
                 </CardTitle>
                 <CardDescription>Basic settings for your organization</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid gap-4">
+              <CardContent>
+                <div className="settings-grid">
                   <div className="grid gap-2">
                     <Label htmlFor="office-name">Office Name</Label>
                     <Input
@@ -180,8 +248,8 @@ export default function AdminSettings() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="location" className="space-y-6 animate-scale-in">
-            <Card className="shadow-soft border-border/50">
+          <TabsContent value="location" className="space-y-6">
+            <Card className="settings-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <MapPin className="w-5 h-5 text-primary" />
@@ -189,8 +257,8 @@ export default function AdminSettings() {
                 </CardTitle>
                 <CardDescription>Set up your office location and attendance radius</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid md:grid-cols-2 gap-6">
+              <CardContent>
+                <div className="settings-grid-2">
                   <div className="space-y-4">
                     <div className="grid gap-2">
                       <Label>Latitude</Label>
@@ -223,17 +291,17 @@ export default function AdminSettings() {
                     </div>
                   </div>
 
-                  <div className="flex flex-col gap-4 justify-center items-center p-6 bg-muted/30 rounded-xl border border-dashed border-border">
-                    <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center animate-pulse-soft">
+                  <div className="location-preview">
+                    <div className="location-icon-wrapper">
                       <Globe className="w-10 h-10 text-primary" />
                     </div>
-                    <div className="text-center space-y-2">
+                    <div>
                       <h4 className="font-medium">Current Location</h4>
-                      <p className="text-sm text-muted-foreground max-w-[200px]">
+                      <p className="text-sm text-muted-foreground">
                         {office.latitude.toFixed(6)}, {office.longitude.toFixed(6)}
                       </p>
                     </div>
-                    <Button variant="outline" onClick={useCurrentLocation} disabled={gettingLocation} className="w-full max-w-xs">
+                    <Button variant="outline" onClick={useCurrentLocation} disabled={gettingLocation} className="w-full">
                       {gettingLocation ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Navigation className="w-4 h-4 mr-2" />}
                       Use My Current Location
                     </Button>
@@ -243,8 +311,8 @@ export default function AdminSettings() {
             </Card>
           </TabsContent>
 
-          <TabsContent value="notifications" className="space-y-6 animate-scale-in">
-            <Card className="shadow-soft border-border/50">
+          <TabsContent value="notifications" className="space-y-6">
+            <Card className="settings-card">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Bell className="w-5 h-5 text-primary" />
@@ -252,32 +320,8 @@ export default function AdminSettings() {
                 </CardTitle>
                 <CardDescription>Manage system alerts and notifications</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-base">Late Arrival Alerts</Label>
-                      <p className="text-sm text-muted-foreground">Notify admin when an employee is late</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-base">Early Exit Alerts</Label>
-                      <p className="text-sm text-muted-foreground">Notify admin when an employee leaves early</p>
-                    </div>
-                    <Switch defaultChecked />
-                  </div>
-                  <Separator />
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-0.5">
-                      <Label className="text-base">Daily Summary</Label>
-                      <p className="text-sm text-muted-foreground">Receive a daily attendance report via email</p>
-                    </div>
-                    <Switch />
-                  </div>
-                </div>
+              <CardContent>
+                <NotificationSettingsPanel />
               </CardContent>
             </Card>
           </TabsContent>

@@ -1,0 +1,211 @@
+/* Check-In/Out Page Styles */
+
+.check-in-container {
+    max-width: 72rem;
+    /* max-w-6xl */
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.check-in-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+    .check-in-header {
+        flex-direction: row;
+        align-items: flex-end;
+        justify-content: space-between;
+    }
+}
+
+.header-user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.greeting-text {
+    color: var(--primary);
+    font-weight: 500;
+}
+
+.user-full-name {
+    font-size: 1.875rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    color: var(--foreground);
+}
+
+.current-date {
+    color: var(--muted-foreground);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.125rem;
+}
+
+.header-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+@media (min-width: 640px) {
+    .header-actions {
+        flex-direction: row;
+    }
+}
+
+.work-mode-card {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border);
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.work-mode-card:hover {
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.work-mode-card.active {
+    background-color: hsla(var(--primary), 0.05);
+    border-color: hsla(var(--primary), 0.2);
+}
+
+.time-card {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border);
+    background-color: var(--card);
+    min-width: 200px;
+}
+
+.live-clock-text {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--foreground);
+    font-family: monospace;
+}
+
+/* Action Area */
+.check-in-main-grid {
+    display: grid;
+    gap: 2rem;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 1024px) {
+    .check-in-main-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.action-column {
+    grid-column: span 2 / span 2;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.main-action-card {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    transition: all 0.3s;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.main-action-card.complete {
+    background-color: hsla(142, 70%, 45%, 0.05);
+    border-color: hsla(142, 70%, 45%, 0.2);
+}
+
+.action-buttons-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 640px) {
+    .action-buttons-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.check-in-button {
+    height: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    transition: all 0.2s;
+}
+
+.check-out-button {
+    height: auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    border-radius: 0.75rem;
+    transition: all 0.2s;
+    background-color: var(--card);
+    border: 1px solid var(--border);
+}
+
+.success-callout {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 0.75rem;
+    background-color: hsla(142, 70%, 45%, 0.1);
+    border: 1px solid hsla(142, 70%, 45%, 0.2);
+}
+
+.activity-summary-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 640px) {
+    .activity-summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.progress-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.progress-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+}
+
+.duration-display {
+    font-size: 1.875rem;
+    font-weight: 700;
+}
+
+.duration-suffix {
+    font-size: 0.875rem;
+    font-weight: 400;
+    color: var(--muted-foreground);
+    margin-left: 0.25rem;
+}
+
+.sidebar-column {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}

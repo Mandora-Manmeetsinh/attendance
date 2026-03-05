@@ -14,10 +14,8 @@ import {
   Clock,
   MapPin,
   Search,
-  ArrowUpDown,
   CheckCircle2,
   XCircle,
-  AlertTriangle
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -30,7 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { AnimatedBackground } from '@/components/AnimatedBackground';
+import '@/styles/Attendance.css';
 
 export default function AdminAttendance() {
   const [records, setRecords] = useState<any[]>([]);
@@ -112,13 +110,8 @@ export default function AdminAttendance() {
 
   return (
     <Layout>
-      <div className="relative z-0">
-        <AnimatedBackground />
-      </div>
-
-      <div className="space-y-8 relative z-10">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 animate-slide-up">
+      <div className="attendance-container">
+        <div className="attendance-header">
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-foreground">Attendance Records</h1>
             <p className="text-muted-foreground mt-1 text-lg">View, filter, and export attendance data</p>
@@ -126,16 +119,15 @@ export default function AdminAttendance() {
           <Button
             onClick={handleExport}
             disabled={exporting}
-            className="gap-2 shadow-glow-accent hover:scale-105 transition-transform"
+            className="gap-2"
           >
             {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileSpreadsheet className="w-4 h-4" />}
             Export to CSV
           </Button>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-scale-in">
-          <Card className="shadow-soft border-border/50 bg-card/50 backdrop-blur-sm">
+        <div className="stats-grid">
+          <Card className="stat-card">
             <CardContent className="p-6 flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Records</p>
@@ -146,7 +138,7 @@ export default function AdminAttendance() {
               </div>
             </CardContent>
           </Card>
-          <Card className="shadow-soft border-border/50 bg-card/50 backdrop-blur-sm">
+          <Card className="stat-card">
             <CardContent className="p-6 flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Present</p>
@@ -157,7 +149,7 @@ export default function AdminAttendance() {
               </div>
             </CardContent>
           </Card>
-          <Card className="shadow-soft border-border/50 bg-card/50 backdrop-blur-sm">
+          <Card className="stat-card">
             <CardContent className="p-6 flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Late</p>
@@ -168,7 +160,7 @@ export default function AdminAttendance() {
               </div>
             </CardContent>
           </Card>
-          <Card className="shadow-soft border-border/50 bg-card/50 backdrop-blur-sm">
+          <Card className="stat-card">
             <CardContent className="p-6 flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Absent</p>
@@ -181,8 +173,7 @@ export default function AdminAttendance() {
           </Card>
         </div>
 
-        {/* Filters */}
-        <Card className="shadow-soft border-border/50 animate-slide-up" style={{ animationDelay: '0.1s' }}>
+        <Card className="filter-card">
           <CardHeader className="pb-4">
             <CardTitle className="text-base flex items-center gap-2">
               <Filter className="w-5 h-5 text-primary" />
@@ -190,14 +181,14 @@ export default function AdminAttendance() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="filter-grid">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search employee..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 bg-background/50"
+                  className="pl-9"
                 />
               </div>
               <div className="relative">
@@ -206,7 +197,7 @@ export default function AdminAttendance() {
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
-                  className="pl-9 bg-background/50"
+                  className="pl-9"
                 />
               </div>
               <div className="relative">
@@ -215,38 +206,39 @@ export default function AdminAttendance() {
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
-                  className="pl-9 bg-background/50"
+                  className="pl-9"
                 />
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="bg-background/50">
-                  <SelectValue placeholder="All Statuses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="present">Present</SelectItem>
-                  <SelectItem value="late">Late</SelectItem>
-                  <SelectItem value="early_exit">Early Exit</SelectItem>
-                  <SelectItem value="absent">Absent</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={shiftFilter} onValueChange={setShiftFilter}>
-                <SelectTrigger className="bg-background/50">
-                  <SelectValue placeholder="All Shifts" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Shifts</SelectItem>
-                  <SelectItem value="employee">Employee Shift</SelectItem>
-                  <SelectItem value="intern_batch1">Intern Batch 1</SelectItem>
-                  <SelectItem value="intern_batch2">Intern Batch 2</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="grid grid-cols-2 gap-2">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="present">Present</SelectItem>
+                    <SelectItem value="late">Late</SelectItem>
+                    <SelectItem value="early_exit">Early Exit</SelectItem>
+                    <SelectItem value="absent">Absent</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={shiftFilter} onValueChange={setShiftFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Shift" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Shifts</SelectItem>
+                    <SelectItem value="employee">Employee</SelectItem>
+                    <SelectItem value="intern_batch1">Batch 1</SelectItem>
+                    <SelectItem value="intern_batch2">Batch 2</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Records Table */}
-        <Card className="shadow-soft border-border/50 overflow-hidden animate-slide-up" style={{ animationDelay: '0.2s' }}>
+        <Card className="records-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="w-5 h-5 text-primary" />
@@ -270,22 +262,22 @@ export default function AdminAttendance() {
                 <p className="text-muted-foreground mt-1">Try adjusting your filters to see more results</p>
               </div>
             ) : (
-              <div className="rounded-xl border overflow-hidden">
-                <Table>
+              <div className="table-container">
+                <Table className="attendance-table">
                   <TableHeader>
-                    <TableRow className="bg-muted/50 hover:bg-muted/50">
-                      <TableHead className="font-semibold">Date</TableHead>
-                      <TableHead className="font-semibold">Employee</TableHead>
-                      <TableHead className="font-semibold">Shift</TableHead>
-                      <TableHead className="font-semibold">Check In</TableHead>
-                      <TableHead className="font-semibold">Check Out</TableHead>
-                      <TableHead className="font-semibold">Distance</TableHead>
-                      <TableHead className="font-semibold">Status</TableHead>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Shift</TableHead>
+                      <TableHead>Check In</TableHead>
+                      <TableHead>Check Out</TableHead>
+                      <TableHead>Distance</TableHead>
+                      <TableHead>Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredRecords.map((r) => (
-                      <TableRow key={r._id} className="hover:bg-muted/30 transition-colors">
+                      <TableRow key={r._id}>
                         <TableCell>
                           <div className="font-medium">{format(new Date(r.date), 'MMM d, yyyy')}</div>
                           <div className="text-xs text-muted-foreground">{format(new Date(r.date), 'EEEE')}</div>
@@ -293,7 +285,7 @@ export default function AdminAttendance() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar className="w-8 h-8 border border-border">
-                              <AvatarFallback className="bg-gradient-to-br from-primary to-indigo-600 text-white text-xs font-bold">
+                              <AvatarFallback className="avatar-initials">
                                 {getInitials(r.user?.full_name)}
                               </AvatarFallback>
                             </Avatar>
@@ -314,17 +306,17 @@ export default function AdminAttendance() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1.5">
+                          <div className="time-cell">
                             <Clock className="w-4 h-4 text-success" />
-                            <span className="font-medium font-mono text-sm">
+                            <span>
                               {r.check_in ? format(new Date(r.check_in), 'hh:mm a') : '—'}
                             </span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1.5">
+                          <div className="time-cell">
                             <Clock className="w-4 h-4 text-primary" />
-                            <span className="font-medium font-mono text-sm">
+                            <span>
                               {r.check_out ? format(new Date(r.check_out), 'hh:mm a') : '—'}
                             </span>
                           </div>

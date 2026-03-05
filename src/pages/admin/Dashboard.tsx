@@ -7,19 +7,13 @@ import client from '@/api/client';
 import {
   Users,
   Clock,
-  CheckCircle2,
-  AlertCircle,
   Loader2,
-  TrendingUp,
   Calendar,
   ArrowRight,
   UserCheck,
   UserX,
-  Trophy,
-  MoreHorizontal,
-  Activity
 } from 'lucide-react';
-import { format, startOfWeek, endOfWeek } from 'date-fns';
+import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -32,7 +26,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { AnimatedBackground } from '@/components/AnimatedBackground';
+import '@/styles/Dashboard.css';
 
 interface WeeklyData {
   day: string;
@@ -45,16 +39,13 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState({ total: 0, present: 0, late: 0, absent: 0 });
   const [recentRecords, setRecentRecords] = useState<any[]>([]);
   const [weeklyData, setWeeklyData] = useState<WeeklyData[]>([]);
+  const [topPerformers, setTopPerformers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [attendanceRate, setAttendanceRate] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // In a real app, you would have dedicated dashboard endpoints
-        // For now, we'll simulate this by fetching raw data or using mock data
-        // TODO: Implement /api/admin/dashboard/stats endpoint
-
         const statsRes = await client.get('/admin/dashboard/stats');
         setStats(statsRes.data);
 
@@ -62,19 +53,14 @@ export default function AdminDashboard() {
         const totalEmployees = statsRes.data.total;
         setAttendanceRate(totalEmployees > 0 ? Math.round((totalPresent / totalEmployees) * 100) : 0);
 
-        // Fetch recent records (using existing history endpoint for now, or create a new one if needed)
-        // For admin dashboard, we might want a specific 'recent activity' endpoint that returns all users' recent checks
-        // Assuming /attendance/history returns current user's history, we need an admin endpoint for ALL history
-        // Let's assume we added /api/admin/activity or similar. For now, we'll skip recent records or mock if endpoint missing.
-        // Actually, let's add a quick fetch for recent activity if we can, or just leave it empty until endpoint exists.
-        // We didn't create /api/admin/activity in the plan, so let's stick to what we have or add it.
-        // Wait, we can use the employees list or something? No.
-        // Let's just comment out the mock data for recent records and leave it empty for now to avoid errors, 
-        // or better, let's keep the mock for recent records ONLY if we didn't implement the backend for it.
-        // We implemented stats and weekly.
-
         const weeklyRes = await client.get('/admin/dashboard/weekly');
         setWeeklyData(weeklyRes.data);
+
+        const topRes = await client.get('/admin/dashboard/top-performers');
+        setTopPerformers(topRes.data);
+
+        const activityRes = await client.get('/admin/dashboard/activity');
+        setRecentRecords(activityRes.data);
 
       } catch (error) {
         console.error("Error fetching dashboard data", error);
@@ -100,84 +86,64 @@ export default function AdminDashboard() {
 
   return (
     <Layout>
-      <div className="relative z-0">
-        <AnimatedBackground />
-      </div>
-
-      <div className="space-y-8 relative z-10">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 animate-slide-up">
+      <div className="dashboard-container space-y-8">
+        <div className="dashboard-header">
           <div>
-            <p className="text-sm font-medium text-primary mb-1">Welcome back</p>
-            <h1 className="text-4xl font-bold tracking-tight text-foreground">Dashboard Overview</h1>
-            <p className="text-muted-foreground flex items-center gap-2 mt-1 text-lg">
-              <Calendar className="w-5 h-5 text-accent" />
+            <p className="text-sm font-medium text-muted-foreground mb-1">Overview</p>
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">Dashboard</h1>
+            <p className="text-muted-foreground flex items-center gap-2 mt-1">
+              <Calendar className="w-4 h-4" />
               {format(new Date(), 'EEEE, MMMM d, yyyy')}
             </p>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
-              <p className="text-sm text-muted-foreground">Today's Attendance Rate</p>
-              <p className="text-3xl font-bold text-primary">{attendanceRate}%</p>
-            </div>
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shadow-glow border border-primary/10">
-              <Activity className="w-8 h-8 text-primary animate-pulse-soft" />
+              <p className="text-sm text-muted-foreground">Attendance Rate</p>
+              <p className="text-2xl font-bold text-foreground">{attendanceRate}%</p>
             </div>
           </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-scale-in">
+        <div className="stats-grid">
           <StatCard
             title="Total Employees"
             value={stats.total}
-            icon={<Users className="w-6 h-6" />}
-            variant="primary"
-            description="Active team members"
-            className="shadow-soft hover:shadow-medium transition-all duration-300 hover:-translate-y-1"
+            icon={<Users className="w-4 h-4 text-muted-foreground" />}
+            variant="default"
+            description="Active members"
+            className="chart-card"
           />
           <StatCard
             title="Present Today"
             value={stats.present}
-            icon={<UserCheck className="w-6 h-6" />}
-            variant="success"
+            icon={<UserCheck className="w-4 h-4 text-emerald-600" />}
+            variant="default"
             trend={{ value: 5, label: 'vs yesterday' }}
-            className="shadow-soft hover:shadow-medium transition-all duration-300 hover:-translate-y-1"
+            className="chart-card"
           />
           <StatCard
             title="Late Arrivals"
             value={stats.late}
-            icon={<Clock className="w-6 h-6" />}
-            variant="warning"
+            icon={<Clock className="w-4 h-4 text-amber-600" />}
+            variant="default"
             description="After shift start"
-            className="shadow-soft hover:shadow-medium transition-all duration-300 hover:-translate-y-1"
+            className="chart-card"
           />
           <StatCard
             title="Absent Today"
             value={stats.absent}
-            icon={<UserX className="w-6 h-6" />}
-            variant="destructive"
+            icon={<UserX className="w-4 h-4 text-rose-600" />}
+            variant="default"
             description="Not checked in"
-            className="shadow-soft hover:shadow-medium transition-all duration-300 hover:-translate-y-1"
+            className="chart-card"
           />
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Weekly Chart */}
-          <Card className="lg:col-span-2 shadow-soft border-border/50 overflow-hidden animate-slide-up" style={{ animationDelay: '0.1s' }}>
+        <div className="charts-grid">
+          <Card className="lg:col-span-2 chart-card">
             <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-primary" />
-                    Weekly Attendance Trend
-                  </CardTitle>
-                  <CardDescription>Employee attendance over the current week</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" className="hidden sm:flex">
-                  View Report
-                </Button>
-              </div>
+              <CardTitle className="text-lg font-medium">Weekly Trends</CardTitle>
+              <CardDescription>Attendance overview for this week</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="h-[300px] w-full">
@@ -185,12 +151,8 @@ export default function AdminDashboard() {
                   <AreaChart data={weeklyData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorPresent" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--success))" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="hsl(var(--success))" stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="colorLate" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="hsl(var(--warning))" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="hsl(var(--warning))" stopOpacity={0} />
+                        <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.1} />
+                        <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
@@ -211,30 +173,31 @@ export default function AdminDashboard() {
                     />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
+                        backgroundColor: 'hsl(var(--popover))',
                         border: '1px solid hsl(var(--border))',
-                        borderRadius: '12px',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                        borderRadius: '6px',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
                       }}
-                      cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1, strokeDasharray: '4 4' }}
+                      itemStyle={{ color: 'hsl(var(--foreground))' }}
+                      cursor={{ stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
                     />
                     <Area
                       type="monotone"
                       dataKey="present"
                       name="Present"
-                      stroke="hsl(var(--success))"
+                      stroke="var(--primary)"
                       fillOpacity={1}
                       fill="url(#colorPresent)"
-                      strokeWidth={3}
+                      strokeWidth={2}
                     />
                     <Area
                       type="monotone"
                       dataKey="late"
                       name="Late"
-                      stroke="hsl(var(--warning))"
-                      fillOpacity={1}
-                      fill="url(#colorLate)"
-                      strokeWidth={3}
+                      stroke="var(--warning)"
+                      fillOpacity={0.2}
+                      fill="var(--warning)"
+                      strokeWidth={2}
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -242,52 +205,37 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
 
-          {/* Recent Activity & Leaderboard */}
-          <div className="space-y-6 animate-slide-up" style={{ animationDelay: '0.2s' }}>
-            {/* Recent Activity */}
-            <Card className="shadow-soft border-border/50">
+          <div className="space-y-6">
+            <Card className="chart-card">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <div>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-accent" />
-                    Live Activity
-                  </CardTitle>
-                </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
+                <CardTitle className="text-base font-medium">Live Feed</CardTitle>
               </CardHeader>
               <CardContent>
                 {recentRecords.length === 0 ? (
-                  <div className="text-center py-8">
-                    <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
-                      <AlertCircle className="w-6 h-6 text-muted-foreground" />
-                    </div>
-                    <p className="text-muted-foreground">No check-ins yet today</p>
+                  <div className="text-center py-8 text-muted-foreground text-sm">
+                    No activity yet
                   </div>
                 ) : (
                   <div className="space-y-4">
                     {recentRecords.map((r) => (
-                      <div key={r.id} className="flex items-center gap-3 group">
-                        <Avatar className="w-10 h-10 border-2 border-background shadow-sm transition-transform group-hover:scale-105">
-                          <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/5 text-primary text-xs font-bold">
+                      <div key={r.id} className="employee-row">
+                        <Avatar className="w-8 h-8">
+                          <AvatarFallback className="text-xs">
                             {r.user?.full_name?.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
                           </AvatarFallback>
                         </Avatar>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold truncate text-foreground/90">{r.user?.full_name}</p>
-                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <p className="text-sm font-medium truncate">{r.user?.full_name}</p>
+                          <p className="text-xs text-muted-foreground">
                             {r.check_in ? format(new Date(r.check_in), 'hh:mm a') : 'Not checked in'}
-                            <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
-                            <span className="capitalize">{r.status.replace('_', ' ')}</span>
                           </p>
                         </div>
                         <StatusBadge status={r.status} size="sm" />
                       </div>
                     ))}
-                    <Button variant="outline" className="w-full mt-2" asChild>
+                    <Button variant="ghost" size="sm" className="w-full mt-2 text-primary" asChild>
                       <Link to="/admin/attendance" className="flex items-center gap-2">
-                        View All Activity <ArrowRight className="w-4 h-4" />
+                        View All <ArrowRight className="w-3 h-3" />
                       </Link>
                     </Button>
                   </div>
@@ -295,39 +243,37 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            {/* Mini Leaderboard (Mock) */}
-            <Card className="shadow-soft border-border/50 bg-gradient-to-br from-card to-accent/5">
+            <Card className="leaderboard-card">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Trophy className="w-4 h-4 text-warning" />
-                  Top Performers
-                </CardTitle>
+                <CardTitle className="text-base font-medium">Top Performers</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center gap-3">
-                      <div className={`
-                        w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold
-                        ${i === 1 ? 'bg-yellow-100 text-yellow-700' :
-                          i === 2 ? 'bg-gray-100 text-gray-700' :
-                            'bg-orange-100 text-orange-700'}
-                      `}>
-                        {i}
-                      </div>
-                      <div className="flex-1">
-                        <div className="h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-primary rounded-full"
-                            style={{ width: `${100 - (i * 10)}%` }}
-                          />
+                  {topPerformers.length === 0 ? (
+                    <div className="text-center py-4 text-muted-foreground text-sm">
+                      No data available
+                    </div>
+                  ) : (
+                    topPerformers.map((user, i) => (
+                      <div key={user.id} className="employee-row">
+                        <div className={`rank-badge rank-${i < 3 ? i + 1 : 'other'}`}>
+                          {i + 1}
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="font-medium">{user.name}</span>
+                            <span className="text-muted-foreground">{user.streak}d Streak</span>
+                          </div>
+                          <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary rounded-full transition-all duration-500"
+                              style={{ width: `${user.score}%` }}
+                            />
+                          </div>
                         </div>
                       </div>
-                      <span className="text-xs font-medium text-muted-foreground">
-                        {100 - (i * 2)}%
-                      </span>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>

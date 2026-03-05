@@ -20,6 +20,20 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     return R * c;
 }
 
+/**
+ * Helper: Determine status based on shift start and grace period (Legacy/Admin fallback)
+ */
+function determineStatus(currentTime, shiftStart, gracePeriodMins, isWithinRadius) {
+    if (!isWithinRadius) return 'absent';
+    if (!shiftStart) return 'present'; // Fallback if user has no shift start defined
+
+    const [hours, minutes] = shiftStart.split(':').map(Number);
+    const start = new Date(currentTime.getFullYear(), currentTime.getMonth(), currentTime.getDate(), hours, minutes);
+    const graceEnd = new Date(start.getTime() + (gracePeriodMins || 15) * 60 * 1000);
+
+    return currentTime > graceEnd ? 'late' : 'present';
+}
+
 // Helper: Parse time string (HH:MM or HH:MM:SS) to Date object for today
 function parseTimeToday(timeStr) {
     const now = new Date();

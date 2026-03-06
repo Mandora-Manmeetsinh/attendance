@@ -9,6 +9,7 @@ import { MapPin, Loader2, Mail, Lock, ArrowRight, Shield, CheckCircle2 } from 'l
 import { toast } from 'sonner';
 import { z } from 'zod';
 import '@/styles/Auth.css';
+import logo from '@/assets/logo.png';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -67,7 +68,7 @@ export default function Auth() {
       <div className="auth-container">
         <div className="auth-branding">
           <div className="logo-section">
-            <img src="src/logo.png" alt="Exotic Infotech" className="h-12 w-auto" />
+            <img src={logo} alt="Exotic Infotech" className="h-12 w-auto" />
             <div>
               <h1 className="text-2xl font-bold">Exotic Infotech</h1>
               <p className="text-sm text-muted-foreground">Attendance Management System</p>
@@ -101,7 +102,7 @@ export default function Auth() {
         <div className="flex items-center justify-center">
           <div className="w-full">
             <div className="text-center mb-8 lg:hidden">
-              <img src="/logo.png" alt="Exotic Infotech" className="h-10 w-auto" />
+              <img src={logo} alt="Exotic Infotech" className="h-10 w-auto" />
               <h1 className="text-2xl font-bold">Attendance System</h1>
             </div>
 

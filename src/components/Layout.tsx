@@ -17,6 +17,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationCenter } from '@/components/NotificationCenter';
 import '@/styles/Layout.css';
+import logo from '@/assets/logo.png';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -61,7 +62,7 @@ export function Layout({ children }: LayoutProps) {
           <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
             {isSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </Button>
-          <img src="/logo.png" alt="Exotic Infotech" className="h-8 w-auto" />
+          <img src={logo} alt="Exotic Infotech" className="h-8 w-auto" />
         </div>
         <div className="flex items-center gap-2">
           <NotificationCenter />
@@ -73,7 +74,7 @@ export function Layout({ children }: LayoutProps) {
       <aside className={`sidebar ${isSidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-content">
           <div className="sidebar-header">
-            <img src="/logo.png" alt="Exotic Infotech" className="h-10 w-auto" />
+            <img src={logo} alt="Exotic Infotech" className="h-10 w-auto" />
           </div>
 
           <nav className="sidebar-nav">

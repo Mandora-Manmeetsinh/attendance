@@ -9,10 +9,12 @@ import adminRoutes from './routes/admin.js';
 import notificationRoutes from './routes/notifications.js';
 import achievementRoutes from './routes/achievements.js';
 import shiftRoutes from './routes/shifts.js';
+import initScheduler from './services/scheduler.js';
 
 dotenv.config();
 
 connectDB();
+initScheduler();
 
 const app = express();
 

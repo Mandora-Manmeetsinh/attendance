@@ -45,6 +45,10 @@ const attendanceSchema = new mongoose.Schema({
         enum: ['present', 'late', 'early_exit', 'absent', 'incomplete', 'halfday'],
         default: 'absent',
     },
+    is_policy_violation: {
+        type: Boolean,
+        default: false,
+    },
     work_mode: {
         type: String,
         enum: ['office', 'wfh'],
@@ -69,6 +73,21 @@ const attendanceSchema = new mongoose.Schema({
         type: String,
         enum: ['present', 'halfday', 'absent', null],
         default: null,
+    },
+    // NEW: Break tracking
+    break_start: {
+        type: Date,
+    },
+    break_end: {
+        type: Date,
+    },
+    break_minutes: {
+        type: Number,
+        default: 0,
+    },
+    is_on_break: {
+        type: Boolean,
+        default: false,
     },
 }, {
     timestamps: true,

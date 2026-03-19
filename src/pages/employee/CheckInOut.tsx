@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -97,7 +97,7 @@ export default function CheckInOut() {
 
   const streak = profile?.current_streak || 0;
 
-  const fetchShiftConfig = async () => {
+  const fetchShiftConfig = useCallback(async () => {
     try {
       const { data } = await client.get('/shifts/my-shift');
       setShiftConfig(data);
@@ -106,9 +106,9 @@ export default function CheckInOut() {
     } finally {
       setShiftLoading(false);
     }
-  };
+  }, []);
 
-  const fetchTodayAttendance = async () => {
+  const fetchTodayAttendance = useCallback(async () => {
     if (!profile) return;
     try {
       const { data } = await client.get('/attendance/today');
@@ -122,14 +122,14 @@ export default function CheckInOut() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [profile]);
 
   useEffect(() => {
     if (profile) {
       fetchTodayAttendance();
       fetchShiftConfig();
     }
-  }, [profile]);
+  }, [profile, fetchTodayAttendance, fetchShiftConfig]);
 
   const handleAttendance = async (action: 'check_in' | 'check_out') => {
     setActionLoading(true);

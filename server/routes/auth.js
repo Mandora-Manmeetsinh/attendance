@@ -181,7 +181,7 @@ router.post('/upload-avatar', protect, uploadAvatar.single('avatar'), async (req
 
         const user = await User.findById(req.user._id);
         const avatarPath = `/uploads/avatars/${req.file.filename}`;
-        
+
         user.avatar_url = avatarPath;
         await user.save();
 

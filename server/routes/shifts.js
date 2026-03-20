@@ -14,7 +14,7 @@ function formatTime(timeStr) {
     const date = parseTimeToday(timeStr);
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
-
+ 
 router.get('/my-shift', protect, async (req, res) => {
     try {
         const user = req.user;

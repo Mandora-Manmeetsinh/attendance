@@ -7,7 +7,7 @@ import crypto from 'crypto';
 import sendEmail from '../utils/sendEmail.js';
 
 const router = express.Router();
-
+ 
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, {
         expiresIn: '30d',

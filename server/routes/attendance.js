@@ -58,11 +58,20 @@ function isEarlyCheckout(checkOutTime, shiftConfig) {
     return checkOutTime < earlyThreshold;
 }
 
-function calculateFinalStatus(isLate, isEarlyCheckoutFlag) {
-    if (isLate && isEarlyCheckoutFlag) {
-        return 'absent';
-    } else if (isLate || isEarlyCheckoutFlag) {
+function calculateFinalStatus(isLate, isEarlyCheckoutFlag, workedMinutes, shiftConfig) {
+    const requiredMins = shiftConfig ? (shiftConfig.min_minutes || 480) : 480;
+    const halfShift = requiredMins / 2;
+
+    if (workedMinutes < halfShift) {
         return 'halfday';
+    } 
+    
+    if (isLate && isEarlyCheckoutFlag) {
+        return 'halfday';
+    } else if (isLate) {
+        return 'late';
+    } else if (isEarlyCheckoutFlag) {
+        return 'early_exit';
     } else {
         return 'present';
     }
@@ -285,12 +294,9 @@ router.post('/check-out', protect, async (req, res) => {
 
         if (shiftConfig) {
             isEarlyCheckoutFlag = isEarlyCheckout(checkOutTime, shiftConfig);
-            const finalStatusResult = calculateFinalStatus(attendance.is_late, isEarlyCheckoutFlag);
+            const finalStatusResult = calculateFinalStatus(attendance.is_late, isEarlyCheckoutFlag, workedMinutes, shiftConfig);
             finalStatus = finalStatusResult;
-
-            if (finalStatus === 'present') newStatus = 'present';
-            else if (finalStatus === 'halfday') newStatus = 'halfday';
-            else if (finalStatus === 'absent') newStatus = 'absent';
+            newStatus = finalStatus;
         } else {
             const currentTime = new Date();
             const [endHours, endMinutes] = user.shift_end.split(':').map(Number);

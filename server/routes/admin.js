@@ -11,7 +11,7 @@ const router = express.Router();
 router.get('/dashboard/stats', protect, admin, async (req, res) => {
     try {
         const totalEmployees = await User.countDocuments({ role: { $ne: 'admin' } });
-
+ 
         const today = new Date().toISOString().split('T')[0];
         const attendanceToday = await Attendance.find({ date: today });
 

@@ -13,7 +13,7 @@ const shiftConfigs = [
         check_in_window_end: '11:00',
         min_minutes: 480,
         description: 'Full-time Employee (10:30 AM - 6:30 PM)',
-    },
+    }, 
     {
         role: 'intern',
         batch: 'batch1',

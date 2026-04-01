@@ -1,7 +1,14 @@
 import mongoose from 'mongoose';
 import ShiftConfig from './models/ShiftConfig.js';
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/radius-check';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '.env') });
+
+const MONGO_URI = process.env.MONGO_URI;
 
 const shiftConfigs = [
     {
@@ -13,7 +20,7 @@ const shiftConfigs = [
         check_in_window_end: '11:00',
         min_minutes: 480,
         description: 'Full-time Employee (10:30 AM - 6:30 PM)',
-    }, 
+    },
     {
         role: 'intern',
         batch: 'batch1',

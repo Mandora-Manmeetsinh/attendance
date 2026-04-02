@@ -17,9 +17,6 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: true,
       },
     },
-    hmr: {
-      overlay: false,
-    },
   },
   plugins: [react()],
   resolve: {

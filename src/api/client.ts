@@ -4,9 +4,8 @@ const baseURL = import.meta.env.VITE_API_URL || '/api';
 
 if (import.meta.env.PROD) {
     if (!import.meta.env.VITE_API_URL) {
-        console.warn('⚠️ Warning: VITE_API_URL is not defined. Falling back to default: ' + baseURL);
+        console.warn('⚠️ Production Warning: VITE_API_URL is not defined in your .env. Using fallback: ' + baseURL);
     }
-    console.log(`🚀 API Client initialized with URL: ${baseURL}`);
 }
 
 const client = axios.create({

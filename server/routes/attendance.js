@@ -7,7 +7,7 @@ import { protect } from '../middleware/authMiddleware.js';
 import { sendCheckInConfirmation, sendCheckOutConfirmation } from '../services/emailService.js';
 
 const router = express.Router();
-// ✅ ADD THIS FUNCTION (MISSING FUNCTION FIX)
+
 async function getShiftConfig(user) {
     const query = { role: user.role };
 

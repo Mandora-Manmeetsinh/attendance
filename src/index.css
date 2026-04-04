@@ -6,80 +6,42 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 224 71.4% 4.1%;
+    --background: 210 40% 98%;
+    --foreground: 222.2 47.4% 11.2%;
     --card: 0 0% 100%;
-    --card-foreground: 224 71.4% 4.1%;
+    --card-foreground: 222.2 47.4% 11.2%;
     --popover: 0 0% 100%;
-    --popover-foreground: 224 71.4% 4.1%;
-    --primary: 199 89% 48%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+    --primary: 243 75% 59%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 220 14.3% 95.9%;
-    --secondary-foreground: 220.9 39.3% 11%;
-    --muted: 220 14.3% 95.9%;
-    --muted-foreground: 220 8.9% 46.1%;
-    --accent: 250 84% 54%;
-    --accent-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
     --success: 142 70% 45%;
     --success-foreground: 210 40% 98%;
     --warning: 38 92% 50%;
     --warning-foreground: 48 96% 89%;
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 199 89% 48%;
-    --radius: 1rem;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 243 75% 59%;
+    --radius: 0.75rem;
 
-    /* Sidebar Customization (Light) */
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 224 71.4% 4.1%;
-    --sidebar-primary: 199 89% 48%;
-    --sidebar-accent: 220 14.3% 95.9%;
-    --sidebar-border: 220 13% 91%;
+    /* Sidebar Customization (Light only) */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222.2 47.4% 11.2%;
+    --sidebar-primary: 243 75% 59%;
+    --sidebar-accent: 210 40% 96.1%;
+    --sidebar-border: 214.3 31.8% 91.4%;
 
-    /* Glass Effects (Light) */
-    --glass-bg: rgba(255, 255, 255, 0.7);
+    /* Standard Card Effects instead of Blur */
+    --glass-bg: #ffffff;
     --glass-border: rgba(0, 0, 0, 0.05);
-    --glass-shadow: rgba(0, 0, 0, 0.05);
-  }
-
-  .dark {
-    --background: 224 71% 4%;
-    --foreground: 210 40% 98%;
-    --card: 224 71% 7%;
-    --card-foreground: 210 40% 98%;
-    --popover: 224 71% 4%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 199 89% 48%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 217 32% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217 32% 17%;
-    --muted-foreground: 215 20% 65%;
-    --accent: 250 84% 54%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
-    --success: 142 70% 45%;
-    --success-foreground: 210 40% 98%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 48 96% 89%;
-    --border: 217 32% 17% / 0.5;
-    --input: 217 32% 17%;
-    --ring: 199 89% 48%;
-
-    /* Sidebar Customization (Dark) */
-    --sidebar-background: 224 71% 3%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 199 89% 48%;
-    --sidebar-accent: 217 32% 17%;
-    --sidebar-border: 217 32% 17% / 0.3;
-
-    /* Glass Effects (Dark) */
-    --glass-bg: rgba(15, 23, 42, 0.6);
-    --glass-border: rgba(255, 255, 255, 0.1);
-    --glass-shadow: rgba(0, 0, 0, 0.4);
+    --glass-shadow: rgba(0, 0, 0, 0.02);
   }
 }
 

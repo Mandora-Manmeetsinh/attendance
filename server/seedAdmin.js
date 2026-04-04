@@ -28,15 +28,13 @@ const seedAdmin = async () => {
         // Check if Users collection exists, if not it will be created automatically
         const User = mongoose.model('User', userSchema);
 
-        const email = 'admin@infotech.com';
-        const password = 'eSN8psFu98v2_Nd'; // Provided in your screenshot
+        const email = 'admin@exoticinfotech.com';
+        const password = 'admin12345';
         const full_name = 'Riddhi Rana';
 
-        const existingAdmin = await User.findOne({ role: 'admin' });
-        if (existingAdmin) {
-            console.log('Admin already exists in the users collection!');
-            process.exit(0);
-        }
+        // Delete all existing admins to completely reset
+        await User.deleteMany({ role: 'admin' });
+        console.log('Cleared existing admins from the database.');
 
         const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -51,7 +49,7 @@ const seedAdmin = async () => {
         console.log('✅ Admin account created successfully in the "users" collection!');
         console.log('Email:', email);
         console.log('Password: (The one you set above)');
-        
+
         process.exit(0);
     } catch (error) {
         console.error('❌ Error seeding admin:', error);

@@ -1,22 +1,26 @@
 import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-dotenv.config();
-
-const transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST,
-    port: process.env.EMAIL_PORT,
-    secure: false,
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-    },
-});
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.join(__dirname, '../.env') });
 
 export const sendEmail = async (to, subject, text) => {
     try {
+        const transporter = nodemailer.createTransport({
+            host: process.env.EMAIL_HOST,
+            port: process.env.EMAIL_PORT,
+            secure: false,
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASS,
+            },
+        });
+
         const info = await transporter.sendMail({
-            from: `"Radius Check" <${process.env.EMAIL_USER || 'noreply@radiuscheck.com'}>`,
+            from: `"Attendance Portal" <${process.env.EMAIL_USER || 'noreply@attendanceportal.com'}>`,
             to,
             subject,
             text,
@@ -35,12 +39,12 @@ export const sendCheckInReminder = async (user) => {
     const subject = 'Friendly Reminder: Shift Starting Soon';
     const message = `Hello ${user.full_name},
 
-Your shift is scheduled to begin in 5 minutes. Please remember to check-in using the Radius Check portal once you are within the designated zone.
+Your shift is scheduled to begin in 5 minutes. Please remember to check-in using the Attendance Portal once you are within the designated zone.
 
 Have a productive day!
 
 Best regards,
-Radius Check System`;
+Attendance Portal`;
     return sendEmail(user.email, subject, message);
 };
 
@@ -53,7 +57,7 @@ This is to confirm that you have successfully checked in today, ${formatDate(che
 Your attendance has been recorded.
 
 Best regards,
-Radius Check System`;
+Attendance Portal`;
     return sendEmail(user.email, subject, message);
 };
 
@@ -61,10 +65,10 @@ export const sendBreakEndingReminder = async (user) => {
     const subject = 'Break Period Conclusion';
     const message = `Hello ${user.full_name},
 
-Your scheduled break period has concluded. Please return to the Radius Check portal to resume your work timer.
+Your scheduled break period has concluded. Please return to the Attendance Portal to resume your work timer.
 
 Thank you,
-Radius Check System`;
+Attendance Portal`;
     return sendEmail(user.email, subject, message);
 };
 
@@ -72,10 +76,10 @@ export const sendCheckOutReminder = async (user) => {
     const subject = 'Action Required: Pending Check-Out';
     const message = `Hello ${user.full_name},
 
-Our records show that your shift has ended, but you have not yet checked out. Please log in to Radius Check to record your departure and ensure your work hours are accurately logged.
+Our records show that your shift has ended, but you have not yet checked out. Please log in to the Attendance Portal to record your departure and ensure your work hours are accurately logged.
 
 Regards,
-Radius Check System`;
+Attendance Portal`;
     return sendEmail(user.email, subject, message);
 };
 
@@ -88,6 +92,6 @@ You have successfully checked out for the day at ${formatTime(checkOutTime)}.
 Thank you for your hard work today. We hope you have a relaxing evening!
 
 Best regards,
-Radius Check System`;
+Attendance Portal`;
     return sendEmail(user.email, subject, message);
 };

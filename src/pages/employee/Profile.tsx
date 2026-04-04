@@ -47,22 +47,24 @@ export default function Profile() {
     const [updating, setUpdating] = useState(false);
     const [editForm, setEditForm] = useState({
         full_name: profile?.full_name || '',
-        phone_number: (profile as any)?.phone_number || '',
-        avatar_url: (profile as any)?.avatar_url || ''
+        email: profile?.email || '',
+        phone_number: profile?.phone_number || '',
+        avatar_url: profile?.avatar_url || ''
     });
 
     useEffect(() => {
         if (profile) {
             setEditForm({
                 full_name: profile.full_name || '',
-                phone_number: (profile as any).phone_number || '',
-                avatar_url: (profile as any).avatar_url || ''
+                email: profile.email || '',
+                phone_number: profile.phone_number || '',
+                avatar_url: profile.avatar_url || ''
             });
         }
     }, [profile]);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [activities, setActivities] = useState<any[]>([]);
+    const [activities, setActivities] = useState<{ _id: string; date: string; check_in: string; check_out?: string; status: string }[]>([]);
     const [loadingActivity, setLoadingActivity] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
 
@@ -112,7 +114,8 @@ export default function Profile() {
             });
             toast.success('Avatar updated!');
             window.location.reload();
-        } catch (err: any) {
+        } catch (error) {
+            const err = error as { response?: { data?: { message?: string } } };
             toast.error(err.response?.data?.message || 'Failed to upload avatar');
         } finally {
             setUploading(false);
@@ -137,7 +140,8 @@ export default function Profile() {
             await client.put('/auth/profile', editForm);
             toast.success('Profile updated');
             window.location.reload();
-        } catch (err: any) {
+        } catch (error) {
+            const err = error as { response?: { data?: { message?: string } } };
             toast.error(err.response?.data?.message || 'Failed to update profile');
         } finally {
             setUpdating(false);
@@ -160,7 +164,8 @@ export default function Profile() {
             await client.post('/auth/change-password', { currentPassword, newPassword });
             toast.success('Password changed successfully');
             (e.target as HTMLFormElement).reset();
-        } catch (err: any) {
+        } catch (error) {
+            const err = error as { response?: { data?: { message?: string } } };
             toast.error(err.response?.data?.message || 'Failed to change password');
         }
     };
@@ -179,46 +184,47 @@ export default function Profile() {
 
     return (
         <Layout>
-            <div className="profile-container space-y-10 p-4 md:p-8">
-                <div className="glass-card rounded-[3rem] border-white/5 overflow-hidden shadow-2xl">
-                    <div className="h-48 md:h-64 bg-gradient-to-br from-primary/20 via-primary/5 to-transparent relative">
-                        <div className="absolute inset-0 ring-1 ring-inset ring-white/10" />
-                        <div className="absolute top-8 right-8">
-                            <Badge className="bg-success/20 text-success border border-success/30 px-4 py-2 rounded-xl font-bold uppercase tracking-widest text-[10px]">
+            <div className="max-w-4xl mx-auto px-4 md:px-8 py-8 space-y-6">
+                
+                {/* Header Profile Section */}
+                <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+                    <div className="h-32 bg-primary/5 relative border-b border-border">
+                        <div className="absolute top-4 right-4">
+                            <Badge className="bg-success/10 text-success hover:bg-success/20 border-none px-3 font-semibold uppercase tracking-wider text-[10px]">
                                 {profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : 'User'}
                             </Badge>
                         </div>
                     </div>
 
-                    <div className="px-8 pb-12 -mt-16 md:-mt-24 relative flex flex-col md:flex-row items-end gap-8">
-                        <div className="relative group">
-                            <div className="w-32 h-32 md:w-48 md:h-48 rounded-[2.5rem] border-[6px] border-background p-1 bg-gradient-to-tr from-primary to-blue-600 shadow-2xl relative overflow-hidden">
-                                <Avatar className="w-full h-full rounded-[2rem]">
+                    <div className="px-6 pb-6 relative flex flex-col md:flex-row items-center md:items-end gap-6">
+                        <div className="relative -mt-16 group">
+                            <div className="w-32 h-32 rounded-xl border-4 border-background bg-card shadow-sm relative overflow-hidden">
+                                <Avatar className="w-full h-full rounded-lg">
                                     {uploading ? (
-                                        <div className="flex items-center justify-center w-full h-full bg-black/50">
-                                            <Loader2 className="w-10 h-10 animate-spin text-white" />
+                                        <div className="flex items-center justify-center w-full h-full bg-muted">
+                                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
                                         </div>
                                     ) : (
                                         <>
-                                            <AvatarImage src={getAvatarSrc((profile as any)?.avatar_url)} className="object-cover" />
-                                            <AvatarFallback className="bg-white/10 text-white text-4xl font-black">
+                                            <AvatarImage src={getAvatarSrc(profile?.avatar_url)} className="object-cover" />
+                                            <AvatarFallback className="bg-primary/5 text-primary text-3xl font-bold">
                                                 {getInitials(profile?.full_name || '')}
                                             </AvatarFallback>
                                         </>
                                     )}
                                 </Avatar>
                             </div>
-                            <div className="absolute -bottom-2 -right-2 flex gap-2">
+                            <div className="absolute -bottom-2 -right-2 flex gap-1">
                                 <button
                                     onClick={handleRandomAvatar}
-                                    className="p-3 bg-card text-foreground rounded-2xl shadow-xl hover:scale-110 active:scale-95 transition-all border-4 border-background group"
+                                    className="p-2 bg-card text-foreground rounded-lg shadow-sm border border-border hover:bg-muted transition-colors"
                                     title="Random Avatar"
                                 >
-                                    <Flame className="w-4 h-4 group-hover:animate-pulse" />
+                                    <Flame className="w-4 h-4 text-orange-500" />
                                 </button>
                                 <button
                                     onClick={() => fileInputRef.current?.click()}
-                                    className="p-3 bg-primary text-primary-foreground rounded-2xl shadow-xl hover:scale-110 active:scale-95 transition-all border-4 border-background"
+                                    className="p-2 bg-primary text-primary-foreground rounded-lg shadow-sm hover:bg-primary/90 transition-colors"
                                     title="Upload Photo"
                                 >
                                     <Camera className="w-4 h-4" />
@@ -227,76 +233,85 @@ export default function Profile() {
                             <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleAvatarUpload} />
                         </div>
 
-                        <div className="flex-1 pb-4">
-                            <h1 className="text-4xl md:text-5xl font-black text-foreground tracking-tighter mb-2">{profile?.full_name}</h1>
-                            <div className="flex flex-wrap gap-4 items-center">
-                                <Badge variant="outline" className="gap-2 border-border bg-muted/50 text-muted-foreground py-1.5 px-4 rounded-xl font-bold">
-                                    <Mail className="w-3.5 h-3.5" />
+                        <div className="flex-1 text-center md:text-left mb-2 md:mb-0">
+                            <h1 className="text-2xl font-bold text-foreground tracking-tight mb-2">{profile?.full_name}</h1>
+                            <div className="flex flex-wrap justify-center md:justify-start gap-2 items-center">
+                                <Badge variant="secondary" className="gap-1.5 font-medium px-2 py-0.5 text-xs rounded-md">
+                                    <Mail className="w-3 h-3 text-muted-foreground" />
                                     {profile?.email}
                                 </Badge>
-                                <Badge variant="outline" className="gap-2 border-border bg-muted/50 text-muted-foreground py-1.5 px-4 rounded-xl font-bold uppercase tracking-widest text-[10px]">
-                                    <Briefcase className="w-3.5 h-3.5" />
+                                <Badge variant="secondary" className="gap-1.5 font-semibold px-2 py-0.5 text-[10px] uppercase tracking-wider rounded-md text-primary">
+                                    <Briefcase className="w-3 h-3" />
                                     {profile?.role}
                                 </Badge>
-                                <div className="h-4 w-px bg-white/10 mx-2" />
-                                <p className="text-sm font-mono text-muted-foreground">ID: {profile?._id.slice(-8).toUpperCase()}</p>
+                                <div className="hidden md:block h-3 w-px bg-border mx-1" />
+                                <p className="text-xs font-mono text-muted-foreground">ID: {profile?._id.slice(-8).toUpperCase()}</p>
                             </div>
                         </div>
 
-                        <div className="pb-4 flex gap-3">
+                        <div className="w-full md:w-auto mb-2 md:mb-0">
                             <Dialog>
                                 <DialogTrigger asChild>
-                                    <Button className="h-12 px-6 rounded-2xl bg-white/5 border border-white/10 hover:bg-white/10 text-white font-bold gap-2">
-                                        <Settings className="w-4 h-4 text-primary" />
+                                    <Button variant="outline" className="w-full md:w-auto h-10 px-4 rounded-lg bg-card border-border hover:bg-muted text-foreground font-medium gap-2 shadow-sm">
+                                        <Settings className="w-4 h-4" />
                                         Edit Profile
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent className="sm:max-w-[500px] glass border-white/10 rounded-[2.5rem] p-0 overflow-hidden shadow-2xl">
-                                    <div className="p-8 space-y-8">
-                                        <div className="space-y-2">
-                                            <h2 className="text-3xl font-black text-white tracking-tighter">Profile Settings</h2>
-                                            <p className="text-muted-foreground font-medium">Update your name, phone number, or avatar.</p>
+                                <DialogContent className="sm:max-w-[425px] rounded-xl p-0 overflow-hidden shadow-lg border-border">
+                                    <div className="p-6 space-y-6">
+                                        <div className="space-y-1">
+                                            <h2 className="text-xl font-bold text-foreground tracking-tight">Profile Settings</h2>
+                                            <p className="text-muted-foreground text-sm">Update your name, phone number, or avatar.</p>
                                         </div>
 
-                                        <div className="space-y-6">
+                                        <div className="space-y-4">
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Full Name</Label>
+                                                <Label className="text-xs font-semibold text-foreground">Full Name</Label>
                                                 <Input
                                                     value={editForm.full_name}
                                                     onChange={(e) => setEditForm({...editForm, full_name: e.target.value})}
-                                                    className="h-14 bg-white/5 border-white/5 rounded-2xl focus:ring-primary/20 text-white font-medium pl-6"
+                                                    className="h-10 rounded-md focus-visible:ring-1 focus-visible:ring-primary"
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Phone Number</Label>
+                                                <Label className="text-xs font-semibold text-foreground">Phone Number</Label>
                                                 <Input
                                                     value={editForm.phone_number}
                                                     onChange={(e) => setEditForm({...editForm, phone_number: e.target.value})}
-                                                    className="h-14 bg-white/5 border-white/5 rounded-2xl focus:ring-primary/20 text-white font-medium pl-6"
+                                                    className="h-10 rounded-md focus-visible:ring-1 focus-visible:ring-primary"
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-[10px] font-black uppercase tracking-widest text-primary ml-1">Avatar URL</Label>
+                                                <Label className="text-xs font-semibold text-foreground">Email Address</Label>
+                                                <Input
+                                                    value={editForm.email}
+                                                    onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                                                    className="h-10 rounded-md focus-visible:ring-1 focus-visible:ring-primary"
+                                                    type="email"
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label className="text-xs font-semibold text-foreground">Avatar URL</Label>
                                                 <Input
                                                     value={editForm.avatar_url}
                                                     onChange={(e) => setEditForm({...editForm, avatar_url: e.target.value})}
-                                                    className="h-14 bg-white/5 border-white/5 rounded-2xl focus:ring-primary/20 text-white font-medium pl-6"
+                                                    className="h-10 rounded-md focus-visible:ring-1 focus-visible:ring-primary"
                                                     placeholder="https://..."
                                                 />
-                                                <p className="text-[10px] text-muted-foreground ml-1">Leave blank to use a generated avatar.</p>
+                                                <p className="text-[10px] text-muted-foreground">Leave blank to use a generated avatar.</p>
                                             </div>
                                         </div>
 
-                                        <div className="flex gap-4 pt-4">
+                                        <div className="flex gap-3 pt-2">
                                             <DialogTrigger asChild>
-                                                <Button variant="outline" className="flex-1 h-14 rounded-2xl border-white/10 text-white font-bold">Cancel</Button>
+                                                <Button variant="outline" className="flex-1 h-10 rounded-lg">Cancel</Button>
                                             </DialogTrigger>
                                             <Button
                                                 onClick={handleUpdateProfile}
-                                                className="flex-1 h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-black uppercase tracking-tighter"
+                                                className="flex-1 h-10 rounded-lg bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
                                                 disabled={updating}
                                             >
-                                                {updating ? <Loader2 className="animate-spin" /> : 'Save Changes'}
+                                                {updating ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save Changes'}
                                             </Button>
                                         </div>
                                     </div>
@@ -306,182 +321,198 @@ export default function Profile() {
                     </div>
                 </div>
 
-                <div className="profile-stats-grid">
+                {/* Stats Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     {stats.map((stat, index) => (
-                        <div key={index} className="stat-item glass-card group">
-                            <div className={`w-14 h-14 mx-auto mb-6 rounded-2xl bg-white/5 flex items-center justify-center border border-white/5 ${stat.color} group-hover:scale-110 transition-transform`}>
-                                <stat.icon className="w-7 h-7" />
+                        <div key={index} className="bg-card border border-border p-5 rounded-xl shadow-sm text-center">
+                            <div className="w-10 h-10 mx-auto mb-3 rounded-lg bg-muted/50 flex items-center justify-center border border-border">
+                                <stat.icon className={`w-5 h-5 ${stat.color}`} />
                             </div>
-                            <p className="stat-value">{stat.value}</p>
-                            <p className="stat-label">{stat.label}</p>
+                            <p className="text-lg font-bold text-foreground leading-tight">{stat.value}</p>
+                            <p className="text-xs font-medium text-muted-foreground mt-1">{stat.label}</p>
                         </div>
                     ))}
                 </div>
 
-                <div className="profile-content-grid">
-                    <div className="lg:col-span-2 space-y-10">
-                        <section className="section-card shadow-2xl">
-                            <div className="flex items-center justify-between mb-8">
+                {/* Main Content Area */}
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+                    
+                    {/* Left Column (Activities/Settings) */}
+                    <div className="md:col-span-8 space-y-6">
+                        
+                        {/* Achievements Card */}
+                        <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
+                            <div className="flex items-center justify-between mb-6">
                                 <div>
-                                    <h2 className="text-2xl font-black text-white tracking-tighter flex items-center gap-2">
-                                        <Trophy className="w-6 h-6 text-primary" />
+                                    <h2 className="text-lg font-bold text-foreground tracking-tight flex items-center gap-2">
+                                        <Trophy className="w-5 h-5 text-primary" />
                                         Achievements
                                     </h2>
-                                    <p className="text-muted-foreground font-medium">Milestones you've unlocked.</p>
+                                    <p className="text-muted-foreground text-sm mt-0.5">Milestones you've unlocked</p>
                                 </div>
-                                <Badge variant="outline" className="border-white/10 rounded-lg">
+                                <Badge variant="secondary" className="rounded-md">
                                     {achievements?.filter(a => a.unlocked_at).length || 0} Unlocked
                                 </Badge>
                             </div>
 
                             {loadingAchievements ? (
-                                <div className="flex justify-center py-12">
-                                    <Loader2 className="w-10 h-10 animate-spin text-primary" />
+                                <div className="flex justify-center py-8">
+                                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
                                 </div>
                             ) : (
-                                <div className="achievement-grid">
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                     {achievements?.map((achievement) => (
-                                        <div key={achievement.id} className="flex flex-col items-center p-4 rounded-3xl hover:bg-white/5 transition-colors border border-transparent hover:border-white/5">
+                                        <div key={achievement.id} className="flex flex-col items-center p-3 rounded-lg border border-border bg-muted/20 hover:bg-muted/50 transition-colors">
                                             <AchievementBadge
                                                 type={achievement.type}
                                                 unlocked={!!achievement.unlocked_at}
                                                 date={achievement.unlocked_at ? format(new Date(achievement.unlocked_at), 'MMM d, yyyy') : undefined}
                                             />
-                                            <p className={`mt-3 text-[10px] font-black uppercase tracking-widest ${achievement.unlocked_at ? 'text-white' : 'text-muted-foreground opacity-30'}`}>
+                                            <p className={`mt-2 text-[10px] font-bold uppercase tracking-wider text-center ${achievement.unlocked_at ? 'text-foreground' : 'text-muted-foreground/50'}`}>
                                                 {achievement.type.replace('_', ' ')}
                                             </p>
                                         </div>
                                     ))}
                                 </div>
                             )}
-                        </section>
+                        </div>
 
-                        <section>
-                            <div className="flex gap-2 mb-8 p-1 bg-muted/50 rounded-2xl border border-border w-fit">
+                        {/* Recent Activity / Settings Toggler */}
+                        <div>
+                            <div className="flex gap-1 mb-4 p-1 bg-muted rounded-lg border border-border w-fit">
                                 <button
-                                    className={`px-6 py-2 rounded-xl font-bold text-sm transition-all ${!showSettings ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'text-muted-foreground hover:text-foreground'}`}
+                                    className={`px-4 py-1.5 rounded-md font-semibold text-xs sm:text-sm transition-all ${!showSettings ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     onClick={() => setShowSettings(false)}
                                 >
-                                    Attendance Logs
+                                    Activity Logs
                                 </button>
                                 <button
-                                    className={`px-6 py-2 rounded-xl font-bold text-sm transition-all ${showSettings ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20' : 'text-muted-foreground hover:text-foreground'}`}
+                                    className={`px-4 py-1.5 rounded-md font-semibold text-xs sm:text-sm transition-all ${showSettings ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
                                     onClick={() => setShowSettings(true)}
                                 >
-                                    Account Settings
+                                    Security
                                 </button>
                             </div>
 
                             {!showSettings ? (
-                                <div className="section-card shadow-2xl">
-                                    {loadingActivity ? (
-                                        <div className="flex justify-center py-12">
-                                            <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                                        </div>
-                                    ) : activities.length === 0 ? (
-                                        <div className="text-center py-12 opacity-50">
-                                            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4 border border-border">
-                                                <Clock className="w-8 h-8" />
+                                <div className="bg-card rounded-xl border border-border p-0 shadow-sm overflow-hidden">
+                                    <div className="p-5 border-b border-border bg-muted/10">
+                                        <h3 className="text-base font-semibold text-foreground">Recent Activity</h3>
+                                    </div>
+                                    <div className="p-5">
+                                        {loadingActivity ? (
+                                            <div className="flex justify-center py-8">
+                                                <Loader2 className="w-6 h-6 animate-spin text-primary" />
                                             </div>
-                                            <p className="font-bold text-foreground">No recent activity.</p>
-                                        </div>
-                                    ) : (
-                                        <div className="activity-list">
-                                            {activities.map((activity) => (
-                                                <div key={activity._id} className="activity-item group">
-                                                    <div className={`activity-icon ${activity.check_out ? 'bg-blue-500/10 text-blue-500' : 'bg-success/10 text-success'}`}>
-                                                        <div className={`w-2 h-2 rounded-full ${activity.check_out ? 'bg-blue-500' : 'bg-success'} animate-pulse`} />
-                                                    </div>
-                                                    <div className="flex-1">
-                                                        <p className="font-black text-foreground uppercase tracking-tighter">
-                                                            {activity.check_out ? 'Checked Out' : 'Checked In'}
-                                                        </p>
-                                                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
-                                                            {format(new Date(activity.date), 'MMMM d, yyyy')}
-                                                        </p>
-                                                    </div>
-                                                    <div className="text-right header-glass glass-card">
-                                                        <p className="font-mono text-foreground font-black text-base">
-                                                            {activity.check_out
-                                                                ? format(new Date(activity.check_out), 'hh:mm a')
-                                                                : format(new Date(activity.check_in), 'hh:mm a')
-                                                            }
-                                                        </p>
-                                                        <StatusBadge status={activity.status} size="sm" />
-                                                    </div>
+                                        ) : activities.length === 0 ? (
+                                            <div className="text-center py-10">
+                                                <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-3 border border-border">
+                                                    <Clock className="w-5 h-5 text-muted-foreground" />
                                                 </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    <Button variant="ghost" className="w-full mt-6 h-12 rounded-2xl hover:bg-muted/50 text-muted-foreground hover:text-foreground font-bold uppercase tracking-widest text-[10px]">
-                                        Load More
-                                    </Button>
+                                                <p className="font-semibold text-foreground text-sm">No recent activity</p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-4">
+                                                {activities.map((activity) => (
+                                                    <div key={activity._id} className="flex items-center gap-4 p-3 rounded-lg border border-border hover:bg-muted/30 transition-colors">
+                                                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${activity.check_out ? 'bg-blue-500/10' : 'bg-success/10'}`}>
+                                                            <div className={`w-2 h-2 rounded-full ${activity.check_out ? 'bg-blue-500' : 'bg-success'}`} />
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <p className="text-sm font-bold text-foreground">
+                                                                {activity.check_out ? 'Checked Out' : 'Checked In'}
+                                                            </p>
+                                                            <p className="text-xs text-muted-foreground font-medium">
+                                                                {format(new Date(activity.date), 'MMM d, yyyy')}
+                                                            </p>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="font-mono text-sm font-semibold text-foreground">
+                                                                {activity.check_out
+                                                                    ? format(new Date(activity.check_out), 'hh:mm a')
+                                                                    : format(new Date(activity.check_in), 'hh:mm a')
+                                                                }
+                                                            </p>
+                                                            <div className="mt-1">
+                                                                <StatusBadge status={activity.status} size="sm" />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                <Button variant="ghost" className="w-full text-xs font-semibold text-muted-foreground h-9 mt-2">
+                                                    Load More
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             ) : (
-                                <div className="section-card shadow-2xl">
-                                    <h3 className="text-xl font-black text-foreground tracking-tighter mb-6 flex items-center gap-2">
+                                <div className="bg-card rounded-xl border border-border p-6 shadow-sm">
+                                    <h3 className="text-lg font-bold text-foreground tracking-tight mb-5 flex items-center gap-2">
                                         <Briefcase className="w-5 h-5 text-primary" /> Change Password
                                     </h3>
-                                    <form onSubmit={handlePasswordChange} className="space-y-6">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <form onSubmit={handlePasswordChange} className="space-y-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="space-y-2">
-                                                <Label className="text-foreground text-[10px] uppercase font-bold tracking-widest">Current Password</Label>
-                                                <Input type="password" name="currentPassword" required className="bg-muted/50 border-border text-foreground h-12 rounded-xl" />
+                                                <Label className="text-xs font-semibold text-foreground">Current Password</Label>
+                                                <Input type="password" name="currentPassword" required className="h-10 rounded-md" />
                                             </div>
                                             <div className="space-y-2">
-                                                <Label className="text-foreground text-[10px] uppercase font-bold tracking-widest">New Password</Label>
-                                                <Input type="password" name="newPassword" required className="bg-muted/50 border-border text-foreground h-12 rounded-xl" />
+                                                <Label className="text-xs font-semibold text-foreground">New Password</Label>
+                                                <Input type="password" name="newPassword" required className="h-10 rounded-md" />
                                             </div>
                                         </div>
                                         <div className="space-y-2">
-                                            <Label className="text-foreground text-[10px] uppercase font-bold tracking-widest">Confirm New Password</Label>
-                                            <Input type="password" name="confirmPassword" required className="bg-muted/50 border-border text-foreground h-12 rounded-xl" />
+                                            <Label className="text-xs font-semibold text-foreground">Confirm New Password</Label>
+                                            <Input type="password" name="confirmPassword" required className="h-10 rounded-md" />
                                         </div>
-                                        <Button type="submit" className="w-full bg-primary text-white font-black uppercase tracking-tighter h-14 rounded-2xl shadow-lg shadow-primary/20">
-                                            Update Password
-                                        </Button>
+                                        <div className="pt-2">
+                                            <Button type="submit" className="w-full md:w-auto px-6 h-10 bg-primary text-primary-foreground font-semibold rounded-lg shadow-sm">
+                                                Update Password
+                                            </Button>
+                                        </div>
                                     </form>
                                 </div>
                             )}
-                        </section>
+                        </div>
                     </div>
 
-                    <div className="space-y-10">
-                        <section className="glass-card p-8 rounded-[2rem] bg-gradient-to-br from-primary/10 via-transparent to-transparent border-primary/20 shadow-2xl">
-                            <h3 className="text-xl font-black text-foreground tracking-tighter mb-8 flex items-center gap-2">
-                                <Shield className="w-5 h-5 text-primary" /> Employment Details
+                    {/* Right Column (Info Cards) */}
+                    <div className="md:col-span-4 space-y-6">
+                        <div className="bg-card p-6 rounded-xl border border-border shadow-sm">
+                            <h3 className="text-base font-bold text-foreground tracking-tight mb-5 flex items-center gap-2">
+                                <Shield className="w-4 h-4 text-primary" /> Employment Details
                             </h3>
-                            <div className="space-y-6">
-                                <div className="space-y-2">
-                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Employee ID</p>
-                                    <p className="font-mono text-[10px] text-foreground/50 bg-muted/50 p-3 rounded-xl border border-border break-all leading-relaxed">{profile?._id}</p>
+                            <div className="space-y-4">
+                                <div>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Employee ID</p>
+                                    <p className="font-mono text-xs text-foreground bg-muted p-2 rounded-md border border-border break-all">{profile?._id}</p>
                                 </div>
-                                <div className="h-px bg-white/5" />
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Joined</p>
-                                    <p className="text-lg font-black text-foreground tracking-tighter">January 10, 2026</p>
+                                <div className="h-px bg-border" />
+                                <div>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Joined</p>
+                                    <p className="text-sm font-semibold text-foreground">January 10, 2026</p>
                                 </div>
-                                <div className="h-px bg-white/5" />
-                                <div className="space-y-1">
-                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Department</p>
-                                    <div className="flex items-center gap-2 mt-2">
-                                        <div className="w-2 h-2 rounded-full bg-primary" />
-                                        <p className="text-lg font-black text-foreground tracking-tighter uppercase">Operations</p>
+                                <div className="h-px bg-border" />
+                                <div>
+                                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-1">Department</p>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                                        <p className="text-sm font-semibold text-foreground">Operations</p>
                                     </div>
                                 </div>
                             </div>
-                        </section>
+                        </div>
 
-                        <section className="glass-card p-8 rounded-[2rem] border-border shadow-2xl relative overflow-hidden group">
-                            <div className="absolute -top-10 -right-10 w-32 h-32 bg-primary/20 rounded-full blur-3xl group-hover:scale-150 transition-transform duration-1000"></div>
-                            <h3 className="text-xl font-black text-foreground tracking-tighter mb-6">HR Support</h3>
-                            <p className="text-sm text-muted-foreground font-medium mb-8 leading-relaxed">
+                        <div className="bg-card p-6 rounded-xl border border-border shadow-sm">
+                            <h3 className="text-base font-bold text-foreground tracking-tight mb-3">HR Support</h3>
+                            <p className="text-sm text-muted-foreground mb-5">
                                 Need to update your details or having issues? Reach out to HR.
                             </p>
-                            <Button className="w-full h-14 rounded-2xl bg-muted/50 border border-border hover:bg-muted text-foreground font-black uppercase tracking-widest text-xs shadow-xl">
+                            <Button variant="outline" className="w-full h-10 rounded-lg font-semibold text-xs border-border">
                                 Contact HR
                             </Button>
-                        </section>
+                        </div>
                     </div>
                 </div>
             </div>

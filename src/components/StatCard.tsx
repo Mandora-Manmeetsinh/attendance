@@ -50,7 +50,7 @@ export function StatCard({
   const styles = variantStyles[variant];
 
   return (
-    <div className={cn('stat-card', className)}>
+    <div className={cn('bg-card border-border shadow-sm rounded-xl p-5 border', className)}>
       <div className="flex items-start justify-between">
         <div className={cn('p-3 rounded-xl', styles.icon)}>
           {icon}

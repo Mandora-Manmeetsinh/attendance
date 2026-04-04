@@ -20,6 +20,14 @@ import {
   Clock,
   Pause,
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { format, differenceInMinutes, differenceInHours } from 'date-fns';
 import { Progress } from '@/components/ui/progress';
@@ -94,6 +102,7 @@ export default function CheckInOut() {
   const [shiftConfig, setShiftConfig] = useState<ShiftConfig | null>(null);
   const [shiftLoading, setShiftLoading] = useState(true);
   const [workMode, setWorkMode] = useState<'office' | 'wfh'>('office');
+  const [attendanceAction, setAttendanceAction] = useState<'check_in' | 'check_out' | null>(null);
 
   const streak = profile?.current_streak || 0;
 
@@ -134,11 +143,25 @@ export default function CheckInOut() {
   const handleAttendance = async (action: 'check_in' | 'check_out') => {
     setActionLoading(true);
     try {
-      let position = { latitude: 0, longitude: 0 };
+      let position;
+
       try {
         position = await getCurrentPosition();
+
+        console.log("📍 LOCATION:", position.latitude, position.longitude);
+
+        // 🚨 IMPORTANT FIX
+        if (!position.latitude || !position.longitude) {
+          throw new Error("Location not available. Please enable GPS.");
+        }
+
       } catch (err) {
-        if (workMode === 'office') throw err;
+        console.error("❌ GEO ERROR:", err);
+
+        toast.error("Please enable location (GPS) and allow permission.");
+
+        setActionLoading(false);
+        return;
       }
 
       const endpoint = action === 'check_in' ? '/attendance/check-in' : '/attendance/check-out';
@@ -248,331 +271,363 @@ export default function CheckInOut() {
   const getAvatarSrc = (url: string | undefined) => {
     if (!url) return `https://api.dicebear.com/7.x/avataaars/svg?seed=${profile?.email || 'user'}`;
     if (url.startsWith('https://') || url.startsWith('http://')) return url;
-    
+
     // Correctly derive server URL from VITE_API_URL or current origin
     const apiURL = import.meta.env.VITE_API_URL || '/api';
-    const serverURL = apiURL.includes('://') 
-        ? apiURL.replace('/api', '') 
-        : window.location.origin;
-        
+    const serverURL = apiURL.includes('://')
+      ? apiURL.replace('/api', '')
+      : window.location.origin;
+
     return `${serverURL}${url}`;
   };
 
   return (
     <Layout>
-      <div className="check-in-container">
-        <div className="check-in-header">
-          <div className="header-user-info">
-            <p className="greeting-text font-display">
-              {getGreeting()}
-            </p>
-            <div className="flex items-center gap-4">
-              <Avatar className="w-12 h-12 border-2 border-primary/20">
-                <AvatarImage src={getAvatarSrc((profile)?.avatar_url)} />
-                <AvatarFallback className="bg-primary/20 text-primary font-bold">
-                  {(profile?.full_name || 'U').split(' ').map(n => n[0]).join('').toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div>
-                <h1 className="user-full-name font-display text-gradient">
-                  {profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : 'User'} {profile?.full_name?.split(' ')[0]}
-                </h1>
-                <p className="current-date">
-                  <Calendar className="w-4 h-4 text-primary" />
-                  {format(new Date(), 'EEEE, dd MMMM yyyy').toUpperCase()}
-                </p>
-              </div>
+      <div className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-6">
+        
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-4 border-b border-border">
+          <div className="flex items-center gap-4">
+            <Avatar className="w-16 h-16 border-2 border-primary/20">
+              <AvatarImage src={getAvatarSrc((profile)?.avatar_url)} />
+              <AvatarFallback className="bg-primary/10 text-primary font-bold text-xl">
+                {(profile?.full_name || 'U').split(' ').map(n => n[0]).join('').toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="text-muted-foreground text-sm font-medium mb-0.5">
+                {getGreeting()}
+              </p>
+              <h1 className="text-2xl md:text-3xl font-bold text-foreground tracking-tight">
+                {profile?.role ? profile.role.charAt(0).toUpperCase() + profile.role.slice(1) : 'User'} {profile?.full_name?.split(' ')[0]}
+              </h1>
             </div>
           </div>
 
-          <div className="header-actions">
-            <div className="time-card glass-card">
-              <div className="flex items-center justify-between gap-12">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-2">Current Time</p>
-                  <div className="live-clock-text">
-                    <LiveClock showSeconds />
-                  </div>
-                </div>
-                <div className="w-16 h-16 rounded-[1.5rem] bg-primary/10 flex items-center justify-center text-primary border border-primary/20 shadow-inner">
-                  <Timer className="w-8 h-8 animate-pulse" />
-                </div>
+          <div className="flex items-center gap-6">
+            <div className="text-right">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Current Time</p>
+              <div className="text-2xl font-bold text-foreground font-mono">
+                <LiveClock showSeconds />
               </div>
+            </div>
+            <div className="hidden sm:flex w-12 h-12 rounded-xl bg-primary/10 items-center justify-center text-primary border border-primary/20">
+              <Timer className="w-6 h-6 animate-pulse" />
             </div>
           </div>
         </div>
 
-        <div className="check-in-main-grid">
-          <div className="action-column">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <Card className="glass-card p-6 border-white/5 bg-white/2">
-                <div className="flex justify-between items-start mb-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">WFH This Month</p>
-                  <Badge variant={stats.wfh >= limits.wfh ? "destructive" : "secondary"} className="text-[10px] py-0">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          {/* Main Action Column */}
+          <div className="lg:col-span-8 space-y-6">
+            
+            {/* Stats Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Card className="bg-card border-border shadow-sm p-4 rounded-xl">
+                <div className="flex justify-between items-start mb-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">WFH This Month</p>
+                  <Badge variant={stats.wfh >= limits.wfh ? "destructive" : "secondary"} className="h-5 px-1.5 text-[10px]">
                     {Math.max(0, limits.wfh - stats.wfh)} left
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-2xl font-black text-white">{stats.wfh}/{limits.wfh}</h3>
-                  <div className={`p-2 rounded-lg ${workMode === 'wfh' ? 'bg-primary/20 text-primary' : 'bg-white/5 text-muted-foreground'}`}>
-                    <Navigation className="w-5 h-5 cursor-pointer" onClick={() => {
-                      if (canCheckIn && stats.wfh < limits.wfh) {
-                        setWorkMode(prev => prev === 'office' ? 'wfh' : 'office');
-                      } else if (canCheckIn) {
-                        toast.error('WFH limit reached for this month');
-                      }
-                    }} />
-                  </div>
+                  <h3 className="text-xl font-bold text-foreground">{stats.wfh}/{limits.wfh}</h3>
+                  <button 
+                    disabled={stats.wfh >= limits.wfh || !canCheckIn}
+                    onClick={() => setWorkMode(prev => prev === 'office' ? 'wfh' : 'office')}
+                    className={`p-1.5 rounded-md transition-colors ${workMode === 'wfh' ? 'bg-primary/20 text-primary' : (canCheckIn ? 'bg-muted hover:bg-muted/80 text-muted-foreground' : 'bg-muted opacity-50 text-muted-foreground')}`}
+                    title={workMode === 'wfh' ? 'Set to Office' : 'Set to WFH'}
+                  >
+                    <Navigation className="w-4 h-4" />
+                  </button>
                 </div>
-                <Progress value={(stats.wfh / limits.wfh) * 100} className="h-1 mt-4" />
+                <Progress value={(stats.wfh / limits.wfh) * 100} className="h-1.5 mt-3" />
               </Card>
 
-              <Card className="glass-card p-6 border-white/5 bg-white/2">
-                <div className="flex justify-between items-start mb-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Late This Month</p>
-                  <Badge variant={stats.late >= limits.late ? "destructive" : "secondary"} className="text-[10px] py-0">
+              <Card className="bg-card border-border shadow-sm p-4 rounded-xl">
+                <div className="flex justify-between items-start mb-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Late This Month</p>
+                  <Badge variant={stats.late >= limits.late ? "destructive" : "secondary"} className="h-5 px-1.5 text-[10px]">
                     {Math.max(0, limits.late - stats.late)} left
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-2xl font-black text-white">{stats.late}/{limits.late}</h3>
-                  <div className="p-2 rounded-lg bg-white/5 text-orange-500">
-                    <Clock className="w-5 h-5" />
+                  <h3 className="text-xl font-bold text-foreground">{stats.late}/{limits.late}</h3>
+                  <div className="p-1.5 rounded-md bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400">
+                    <Clock className="w-4 h-4" />
                   </div>
                 </div>
-                <Progress value={(stats.late / limits.late) * 100} className="h-1 mt-4" />
+                <Progress value={(stats.late / limits.late) * 100} className="h-1.5 mt-3 indicator-orange" />
               </Card>
 
-              <Card className="glass-card p-6 border-white/5 bg-white/2">
-                <div className="flex justify-between items-start mb-4">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Leaves This Month</p>
-                  <Badge variant={stats.leave >= limits.leave ? "destructive" : "secondary"} className="text-[10px] py-0">
+              <Card className="bg-card border-border shadow-sm p-4 rounded-xl">
+                <div className="flex justify-between items-start mb-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Leaves This Month</p>
+                  <Badge variant={stats.leave >= limits.leave ? "destructive" : "secondary"} className="h-5 px-1.5 text-[10px]">
                     {Math.max(0, limits.leave - stats.leave)} left
                   </Badge>
                 </div>
                 <div className="flex items-center justify-between">
-                  <h3 className="text-2xl font-black text-white">{stats.leave}/{limits.leave}</h3>
-                  <div className="p-2 rounded-lg bg-white/5 text-purple-500">
-                    <Calendar className="w-5 h-5" />
+                  <h3 className="text-xl font-bold text-foreground">{stats.leave}/{limits.leave}</h3>
+                  <div className="p-1.5 rounded-md bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">
+                    <Calendar className="w-4 h-4" />
                   </div>
                 </div>
-                <Progress value={(stats.leave / limits.leave) * 100} className="h-1 mt-4" />
+                <Progress value={(stats.leave / limits.leave) * 100} className="h-1.5 mt-3 indicator-purple" />
               </Card>
             </div>
 
-            <Card className={`main-action-card glass-card ${isComplete ? 'complete' : ''}`}>
-              <CardHeader className="pb-10">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-4xl font-black tracking-tighter flex items-center gap-4 text-white">
-                      <Fingerprint className="w-10 h-10 text-primary" />
-                      {isComplete ? 'Shift Complete' : canCheckOut ? 'Currently Working' : 'Check In / Out'}
-                    </CardTitle>
-                    <CardDescription className="text-muted-foreground font-medium mt-3 text-lg">
-                      {isComplete ? 'Your attendance has been recorded for today.' : 'Mark your attendance for today\'s shift.'}
-                    </CardDescription>
-                  </div>
-                  {todayRecord && (
-                    <StatusBadge status={todayRecord.is_on_break ? 'on_break' : todayRecord.status} size="lg" />
-                  )}
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-10">
+            {/* Attendance Action Card */}
+            <Card className="bg-card border-border shadow-sm rounded-xl overflow-hidden">
+              <div className="p-6 md:p-8 flex flex-col items-center justify-center relative min-h-[320px] bg-muted/10">
                 {geoError && (
-                  <div className="flex items-center gap-4 p-8 bg-destructive/5 text-destructive rounded-[2rem] border border-destructive/20">
-                    <AlertCircle className="w-6 h-6 shrink-0" />
-                    <div>
-                      <p className="font-black uppercase tracking-widest text-xs mb-1">Location Error</p>
-                      <p className="font-medium opacity-80">{geoError}</p>
-                    </div>
+                  <div className="absolute top-4 left-4 right-4 flex items-center gap-3 p-4 bg-destructive/10 text-destructive rounded-lg border border-destructive/20 text-sm">
+                    <AlertCircle className="w-5 h-5 shrink-0" />
+                    <p className="font-medium">{geoError}</p>
                   </div>
                 )}
 
-                <div className="action-buttons-grid">
+                <div className="text-center mb-10 w-full max-w-sm mx-auto flex items-center justify-between">
+                   <div>
+                      <h2 className="text-xl font-bold text-foreground text-left">
+                        {isComplete ? 'Shift Complete' : canCheckOut ? 'Currently Working' : 'Ready to begin?'}
+                      </h2>
+                      <p className="text-muted-foreground text-sm text-left">
+                        {isComplete ? 'Great job today.' : 'Please log your attendance.'}
+                      </p>
+                   </div>
+                   {todayRecord && (
+                     <StatusBadge status={todayRecord.is_on_break ? 'on_break' : todayRecord.status} size="sm" />
+                   )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-6 w-full max-w-md">
                   <Button
-                    className="check-in-button"
+                    className={`flex-1 h-32 w-full rounded-2xl flex flex-col items-center justify-center gap-3 transition-all border shadow-sm
+                      ${canCheckIn 
+                          ? 'bg-primary hover:bg-primary/95 text-primary-foreground border-transparent' 
+                          : 'bg-muted text-muted-foreground border-border cursor-not-allowed opacity-70'}
+                    `}
                     disabled={!canCheckIn || actionLoading || geoLoading}
-                    onClick={() => handleAttendance('check_in')}
+                    onClick={() => setAttendanceAction('check_in')}
+                    variant={canCheckIn ? 'default' : 'outline'}
                   >
                     {actionLoading && !todayRecord?.check_in ? (
-                      <Loader2 className="w-10 h-10 animate-spin" />
+                      <Loader2 className="w-8 h-8 animate-spin" />
                     ) : (
-                      <div className="relative">
-                        <div className="absolute inset-0 bg-primary blur-2xl opacity-50 animate-pulse"></div>
-                        <LogIn className="w-12 h-12 relative z-10" />
-                      </div>
+                      <LogIn className="w-8 h-8" />
                     )}
-                    <div className="text-center relative z-10">
-                      <p className="text-2xl font-black uppercase tracking-tighter">Check In</p>
-                      <p className="text-[10px] font-bold opacity-70 tracking-widest mt-1">START TRACKING</p>
-                    </div>
+                    <span className="font-semibold text-lg">Check In</span>
                   </Button>
 
                   <Button
-                    className="check-out-button group"
+                    className={`flex-1 h-32 w-full rounded-2xl flex flex-col items-center justify-center gap-3 transition-all border shadow-sm
+                      ${canCheckOut && !todayRecord?.is_on_break
+                          ? 'bg-foreground hover:bg-foreground/90 text-background border-transparent' 
+                          : 'bg-card hover:bg-muted text-muted-foreground border-border opacity-70'}
+                    `}
                     disabled={!canCheckOut || todayRecord?.is_on_break || actionLoading || geoLoading}
-                    onClick={() => handleAttendance('check_out')}
+                    onClick={() => setAttendanceAction('check_out')}
+                    variant="outline"
                   >
                     {actionLoading && canCheckOut ? (
-                      <Loader2 className="w-10 h-10 animate-spin" />
+                      <Loader2 className="w-8 h-8 animate-spin" />
                     ) : (
-                      <LogOut className="w-12 h-12 text-primary group-hover:rotate-12 transition-transform" />
+                      <LogOut className="w-8 h-8" />
                     )}
-                    <div className="text-center">
-                      <p className="text-2xl font-black uppercase tracking-tighter text-white">Check Out</p>
-                      <p className="text-[10px] font-bold text-muted-foreground tracking-widest mt-1">STOP TRACKING</p>
-                    </div>
+                    <span className="font-semibold text-lg">Check Out</span>
                   </Button>
+                </div>
 
-                  {canCheckOut && (
+                {canCheckOut && (
+                  <div className="mt-6 w-full max-w-md">
                     <Button
-                      className={`break-action-button ${todayRecord?.is_on_break ? 'active' : ''}`}
+                      variant="outline"
+                      className={`w-full h-12 rounded-lg font-medium shadow-sm gap-2 ${todayRecord?.is_on_break ? 'bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200' : 'bg-card text-foreground border-border hover:bg-muted'}`}
                       disabled={actionLoading}
                       onClick={todayRecord?.is_on_break ? handleResumeBreak : handleStartBreak}
                     >
-                      <Pause className={`w-12 h-12 ${todayRecord?.is_on_break ? 'animate-pulse text-indigo-400' : 'text-primary'}`} />
-                      <div className="text-center">
-                        <p className="text-2xl font-black uppercase tracking-tighter text-white">
-                          {todayRecord?.is_on_break ? 'Resume' : 'Break'}
-                        </p>
-                        <p className="text-[10px] font-bold text-muted-foreground tracking-widest mt-1 ">
-                          {todayRecord?.is_on_break ? '' : ''}
-                        </p>
-                      </div>
+                      <Pause className="w-4 h-4" />
+                      {todayRecord?.is_on_break ? 'Resume Work' : 'Take a Break'}
                     </Button>
-                  )}
-                </div>
-
-                {todayRecord?.check_in && !todayRecord.check_out && (
-                  <div className={`break-status-card glass-card p-6 border-white/5 bg-white/2 ${todayRecord.is_on_break ? 'border-primary/30' : ''}`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className={`p-3 rounded-2xl ${todayRecord.is_on_break ? 'bg-primary/20 text-primary' : 'bg-white/5 text-muted-foreground'}`}>
-                          <Timer className={`w-6 h-6 ${todayRecord.is_on_break ? 'animate-spin-slow' : ''}`} />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-black uppercase tracking-widest text-muted-foreground mb-1">Break Time Used</p>
-                          <h4 className={`text-xl font-black ${getBreakTime() > 45 ? 'text-destructive' : 'text-white'}`}>
-                            {getBreakTime()} / 45 <span className="text-xs opacity-50 ml-1">mins</span>
-                          </h4>
-                        </div>
-                      </div>
-                      {getBreakTime() > 45 && (
-                        <Badge variant="destructive" className="animate-pulse">LIMIT EXCEEDED</Badge>
-                      )}
-                    </div>
-                    <Progress
-                      value={Math.min(100, (getBreakTime() / 45) * 100)}
-                      className={`h-2 mt-4 ${getBreakTime() > 45 ? 'bg-destructive/20' : ''}`}
-                    />
                   </div>
                 )}
-              </CardContent>
+                
+                {todayRecord?.check_in && !todayRecord.check_out && (
+                  <div className="mt-8 w-full">
+                     <div className={`p-4 rounded-xl border ${todayRecord.is_on_break ? 'border-primary/50 bg-primary/5' : 'border-border bg-card'} w-full flex items-center justify-between`}>
+                        <div className="flex items-center gap-3">
+                           <div className={`p-2 rounded-lg ${todayRecord.is_on_break ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}`}>
+                              <Timer className={`w-4 h-4 ${todayRecord.is_on_break ? 'animate-spin-slow' : ''}`} />
+                           </div>
+                           <div>
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Break Time Used</p>
+                              <div className="flex items-baseline gap-1">
+                                <span className={`text-lg font-bold ${getBreakTime() > 45 ? 'text-destructive' : 'text-foreground'}`}>{getBreakTime()}</span>
+                                <span className="text-xs text-muted-foreground">/ 45 mins</span>
+                              </div>
+                           </div>
+                        </div>
+                        {getBreakTime() > 45 && (
+                          <Badge variant="destructive">Exceeded</Badge>
+                        )}
+                     </div>
+                  </div>
+                )}
+              </div>
             </Card>
 
-            <div className="activity-summary-grid">
-              <Card className="summary-card-premium glass-card overflow-hidden group">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000"></div>
-                <CardHeader className="pb-6">
-                  <CardTitle className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-3">
-                    <Fingerprint className="w-4 h-4 text-primary" /> Today's Times
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between p-5 bg-white/5 rounded-[1.5rem] border border-white/5 transition-colors hover:bg-white/10">
-                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Checked In</span>
-                    <span className="text-xl font-black font-mono text-white">
+            {/* Quick Summary Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <Card className="bg-card border-border shadow-sm p-5 rounded-xl">
+                <div className="flex items-center gap-2 mb-4 text-muted-foreground">
+                  <Fingerprint className="w-4 h-4" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider">Today's Times</h3>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg border border-border">
+                    <span className="text-sm font-semibold text-muted-foreground">Check In</span>
+                    <span className="text-base font-mono font-bold text-foreground">
                       {todayRecord?.check_in ? format(new Date(todayRecord.check_in), 'hh:mm a') : '—'}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between p-5 bg-white/5 rounded-[1.5rem] border border-white/5 transition-colors hover:bg-white/10">
-                    <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Checked Out</span>
-                    <span className="text-xl font-black font-mono text-white">
+                  <div className="flex items-center justify-between p-3 bg-muted/40 rounded-lg border border-border">
+                    <span className="text-sm font-semibold text-muted-foreground">Check Out</span>
+                    <span className="text-base font-mono font-bold text-foreground">
                       {todayRecord?.check_out ? format(new Date(todayRecord.check_out), 'hh:mm a') : '—'}
                     </span>
                   </div>
-                </CardContent>
+                </div>
               </Card>
 
-              <Card className="summary-card-premium glass-card group overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-accent/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-1000"></div>
-                <CardHeader className="pb-6">
-                  <CardTitle className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-3">
-                    <Clock className="w-4 h-4 text-primary" /> Work Duration
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {workDuration ? (
-                    <div className="space-y-8">
-                      <div className="flex items-end justify-between">
-                        <p className="duration-display">
-                          {workDuration.hours}<span className="duration-suffix">h</span> {workDuration.mins}<span className="duration-suffix">m</span>
-                        </p>
-                        <div className="text-right">
-                          <p className="text-3xl font-black text-primary tracking-tighter">{shiftProgress}%</p>
-                          <p className="text-[8px] font-black uppercase tracking-widest text-muted-foreground">of shift</p>
-                        </div>
-                      </div>
-                      <div className="h-4 bg-white/5 rounded-full p-1 border border-white/5 shadow-inner">
-                        <div
-                          className="h-full bg-gradient-to-r from-primary to-accent rounded-full transition-all duration-1000 ease-out shadow-[0_0_15px_rgba(14,165,233,0.4)]"
-                          style={{ width: `${shiftProgress}%` }}
-                        />
+              <Card className="bg-card border-border shadow-sm p-5 rounded-xl">
+                <div className="flex items-center gap-2 mb-4 text-muted-foreground">
+                  <Clock className="w-4 h-4" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider">Work Duration</h3>
+                </div>
+                {workDuration ? (
+                  <div className="space-y-6">
+                    <div className="flex items-end justify-between">
+                      <p className="text-3xl font-bold text-foreground">
+                        {workDuration.hours}<span className="text-lg text-muted-foreground mx-1">h</span> {workDuration.mins}<span className="text-lg text-muted-foreground ml-1">m</span>
+                      </p>
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-primary">{shiftProgress}%</p>
+                        <p className="text-[10px] font-semibold text-muted-foreground uppercase">of shift</p>
                       </div>
                     </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground/40 italic">
-                      <Timer className="w-12 h-12 mb-4 opacity-10 animate-spin-slow" />
-                      <p className="text-sm font-bold uppercase tracking-widest">Not checked in yet</p>
-                    </div>
-                  )}
-                </CardContent>
+                    <Progress value={shiftProgress} className="h-2.5" />
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-6 text-center text-muted-foreground">
+                    <Timer className="w-8 h-8 opacity-20 mb-2" />
+                    <p className="text-sm font-medium">Not checked in yet</p>
+                  </div>
+                )}
               </Card>
             </div>
           </div>
-
-          <div className="sidebar-column">
+          
+          {/* Sidebar Column */}
+          <div className="lg:col-span-4 space-y-6">
             <StreakCounter streak={streak} bestStreak={profile?.best_streak || streak} />
-
-            <Card className="glass-card overflow-hidden">
-              <CardHeader className="border-b border-white/5 bg-white/2 pb-6">
-                <CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center gap-3 text-primary">
-                  <Clock className="w-4 h-4" /> Today's Shift
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-8 space-y-6">
+            
+            <Card className="bg-card border-border shadow-sm rounded-xl overflow-hidden">
+              <div className="p-4 bg-muted/30 border-b border-border">
+                <h3 className="text-sm font-semibold text-foreground flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-primary" /> Today's Shift
+                </h3>
+              </div>
+              <div className="p-5">
                 {shiftLoading ? (
-                  <div className="flex justify-center p-8"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+                  <div className="flex justify-center p-4">
+                     <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                  </div>
                 ) : shiftConfig ? (
-                  <>
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Shift Hours</p>
-                      <p className="font-black text-2xl tracking-tighter text-white">{shiftConfig.formatted.shift_start} — {shiftConfig.formatted.shift_end}</p>
+                  <div className="space-y-5">
+                    <div>
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">Shift Hours</p>
+                      <p className="font-bold text-lg text-foreground">{shiftConfig.formatted.shift_start} — {shiftConfig.formatted.shift_end}</p>
                     </div>
-                    <div className="space-y-3">
-                      <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">Role / Batch</p>
-                      <div className="flex gap-2">
-                        <Badge variant="secondary" className="font-black px-4 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20">{profile?.role?.toUpperCase()}</Badge>
-                        {profile?.batch && <Badge variant="outline" className="font-black px-4 py-1.5 rounded-lg border-white/10 uppercase">{profile.batch}</Badge>}
+                    <div>
+                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Role / Batch</p>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="px-2.5 py-0.5 rounded-md font-semibold text-xs text-primary bg-primary/10 hover:bg-primary/20">
+                          {profile?.role?.toUpperCase()}
+                        </Badge>
+                        {profile?.batch && (
+                          <Badge variant="outline" className="px-2.5 py-0.5 rounded-md font-semibold text-xs">
+                            {profile.batch}
+                          </Badge>
+                        )}
                       </div>
                     </div>
-                  </>
+                  </div>
                 ) : (
-                  <p className="text-sm font-bold text-muted-foreground/50 italic py-4">No shift assigned.</p>
+                  <p className="text-sm text-muted-foreground italic">No shift assigned.</p>
                 )}
-                <div className="pt-4">
-                  <Button variant="ghost" className="w-full h-14 rounded-2xl bg-white/5 hover:bg-white/10 text-white font-black uppercase tracking-widest text-[10px] justify-between group" asChild>
+                <div className="mt-6 pt-4 border-t border-border">
+                  <Button variant="outline" className="w-full h-10 rounded-lg font-medium text-sm gap-2" asChild>
                     <a href="/employee/history">
-                      View History <Clock className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+                      View History <Clock className="w-4 h-4 opacity-50" />
                     </a>
                   </Button>
                 </div>
-              </CardContent>
+              </div>
             </Card>
           </div>
         </div>
       </div>
+
+      <Dialog open={!!attendanceAction} onOpenChange={(open) => !open && setAttendanceAction(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{attendanceAction === 'check_in' ? 'Check In' : 'Check Out'}</DialogTitle>
+            <DialogDescription>
+              Are you working from home or from the office for this session?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <Button
+              variant={workMode === 'office' ? 'default' : 'outline'}
+              onClick={() => setWorkMode('office')}
+              className={workMode === 'office' ? 'ring-2 ring-primary ring-offset-2' : ''}
+            >
+              🏢 Office
+            </Button>
+            <Button
+              variant={workMode === 'wfh' ? 'default' : 'outline'}
+              onClick={() => setWorkMode('wfh')}
+              disabled={workMode !== 'wfh' && stats.wfh >= limits.wfh && attendanceAction === 'check_in'}
+              className={workMode === 'wfh' ? 'ring-2 ring-primary ring-offset-2' : ''}
+            >
+              🏠 Work From Home
+              {stats.wfh >= limits.wfh && attendanceAction === 'check_in' && (
+                <span className="block text-[10px] mt-1 opacity-70">(Limit reached)</span>
+              )}
+            </Button>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="ghost" className="w-full sm:w-auto" onClick={() => setAttendanceAction(null)}>
+              Cancel
+            </Button>
+            <Button
+              className="w-full sm:w-auto"
+              disabled={actionLoading || geoLoading}
+              onClick={() => {
+                if (attendanceAction) {
+                  handleAttendance(attendanceAction);
+                  setAttendanceAction(null);
+                }
+              }}
+            >
+              {actionLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Confirm {attendanceAction === 'check_in' ? 'Check In' : 'Check Out'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 }

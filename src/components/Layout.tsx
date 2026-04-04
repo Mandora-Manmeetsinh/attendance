@@ -14,7 +14,6 @@ import {
   MapPin
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
-import { ThemeToggle } from '@/components/ThemeToggle';
 import { NotificationCenter } from '@/components/NotificationCenter';
 import '@/styles/Layout.css';
 import logo from '@/assets/logo.png';
@@ -66,7 +65,6 @@ export function Layout({ children }: LayoutProps) {
         </div>
         <div className="flex items-center gap-2">
           <NotificationCenter />
-          <ThemeToggle />
         </div>
       </header>
 
@@ -75,7 +73,6 @@ export function Layout({ children }: LayoutProps) {
         <div className="sidebar-content">
           <div className="sidebar-header">
             <img src={logo} alt="Exotic Infotech" className="h-10 w-auto" />
-            <span className="sidebar-brand-name font-display text-gradient">Radius Check</span>
           </div>
 
           <nav className="sidebar-nav">
@@ -132,7 +129,6 @@ export function Layout({ children }: LayoutProps) {
           </h2>
           <div className="flex items-center gap-4">
             <NotificationCenter />
-            <ThemeToggle />
           </div>
         </header>
 

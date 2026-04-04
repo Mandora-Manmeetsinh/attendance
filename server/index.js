@@ -16,7 +16,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '.env') });
 
 // Connect DB
 connectDB();
@@ -28,8 +28,23 @@ const app = express();
 
 
 // ✅ FIXED CORS (IMPORTANT)
+const allowedOrigins = [
+  "https://attendance.exoticinfotech.com",
+  "http://localhost:8080",
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://127.0.0.1:8080",
+  "http://127.0.0.1:5173"
+];
 app.use(cors({
-  origin: "https://attendance.exoticinfotech.com",
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 

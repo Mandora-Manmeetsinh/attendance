@@ -10,7 +10,6 @@ import { toast } from 'sonner';
 import { z } from 'zod';
 import '@/styles/Auth.css';
 import logo from '@/assets/logo.png';
-import { ThemeToggle } from '@/components/ThemeToggle';
 import client from '@/api/client';
 
 const loginSchema = z.object({
@@ -106,14 +105,10 @@ export default function Auth() {
 
   return (
     <div className="auth-page-wrapper">
-      <div className="absolute top-8 right-8 z-50">
-        <ThemeToggle />
-      </div>
       <div className="auth-container">
         <div className="auth-branding">
           <div className="logo-section animate-float">
             <img src={logo} alt="Exotic Infotech" className="h-16 w-auto" />
-            <h1 className="text-4xl font-black tracking-tighter text-foreground">Radius Check</h1>
           </div>
 
           <div className="space-y-8 mt-12 bg-muted/20 p-10 rounded-[3rem] border border-border backdrop-blur-xl relative overflow-hidden group">
@@ -143,23 +138,13 @@ export default function Auth() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 px-6 py-4 rounded-2xl bg-primary/5 border border-primary/10 w-fit">
-            <div className="flex -space-x-3">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="w-10 h-10 rounded-full border-4 border-background bg-muted flex items-center justify-center text-[10px] font-bold overflow-hidden">
-                  {i === 4 ? '+50' : <div className="w-full h-full bg-gradient-to-br from-primary/20 to-accent/20" />}
-                </div>
-              ))}
-            </div>
-            <p className="text-xs font-bold text-muted-foreground">Join 500+ professionals using Radius Check</p>
-          </div>
+          
         </div>
 
         <div className="flex items-center justify-center relative">
           <div className="w-full max-w-md">
             <div className="text-center mb-10 lg:hidden">
               <img src={logo} alt="Exotic Infotech" className="h-12 w-auto mx-auto mb-4" />
-              <h1 className="text-3xl font-black tracking-tighter">Radius Check</h1>
             </div>
 
             <Card className="auth-form-card">

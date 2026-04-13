@@ -7,6 +7,18 @@ import { protect } from '../middleware/authMiddleware.js';
 import { sendCheckInConfirmation, sendCheckOutConfirmation } from '../services/emailService.js';
 
 const router = express.Router();
+
+async function getShiftConfig(user) {
+    const query = { role: user.role };
+
+    if (user.role === 'intern') {
+        query.batch = user.batch;
+    } else {
+        query.batch = null;
+    }
+
+    return await ShiftConfig.findOne(query);
+}
 function calculateDistance(lat1, lon1, lat2, lon2) {
     const R = 6371000;
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -20,24 +32,24 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 }
 
 function parseTimeToday(timeStr) {
-    const now = new Date();
-    const parts = timeStr.split(':').map(Number);
-    const hours = parts[0];
-    const minutes = parts[1] || 0;
-    return new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
-}
-async function getShiftConfig(user) {
-    const query = { role: user.role };
-    if (user.role === 'intern') {
-        query.batch = user.batch;
-    } else {
-        query.batch = null;
-    }
-    return await ShiftConfig.findOne(query);
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+    
+    // Convert to IST manually
+    const istNow = new Date(now.toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+
+    const [hours, minutes] = timeStr.split(':').map(Number);
+
+    return new Date(
+        istNow.getFullYear(),
+        istNow.getMonth(),
+        istNow.getDate(),
+        hours,
+        minutes
+    );
 }
 
 function isWithinShiftWindow(shiftConfig) {
-    const now = new Date();
+    const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
     const shiftStart = parseTimeToday(shiftConfig.shift_start);
     const shiftEnd = parseTimeToday(shiftConfig.shift_end);
     return now >= shiftStart && now <= shiftEnd;
@@ -126,7 +138,7 @@ router.post('/check-in', protect, async (req, res) => {
             }
         }
 
-        const now = new Date();
+        const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
         const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const existing = await Attendance.findOne({ user: userId, date: today });
 
@@ -147,7 +159,12 @@ router.post('/check-in', protect, async (req, res) => {
                     return res.status(400).json({
                         error: 'Check-in is not allowed at this time',
                         message: `You can only check in during your shift: ${shiftStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} - ${shiftEnd.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`,
-                        currentTime: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+                        currentTime: new Date().toLocaleString("en-US", {
+    timeZone: "Asia/Kolkata",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true
+})
                     });
                 }
 
@@ -257,7 +274,7 @@ router.post('/check-out', protect, async (req, res) => {
     const userId = req.user._id;
 
     try {
-        const now = new Date();
+        const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
         const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const attendance = await Attendance.findOne({ user: userId, date: today });
 
@@ -344,7 +361,7 @@ router.post('/check-out', protect, async (req, res) => {
 
 router.post('/start-break', protect, async (req, res) => {
     try {
-        const now = new Date();
+        const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
         const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const attendance = await Attendance.findOne({ user: req.user._id, date: today });
 
@@ -383,7 +400,7 @@ router.post('/start-break', protect, async (req, res) => {
 
 router.post('/resume-break', protect, async (req, res) => {
     try {
-        const now = new Date();
+       const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
         const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const attendance = await Attendance.findOne({ user: req.user._id, date: today });
 
@@ -426,7 +443,7 @@ router.post('/resume-break', protect, async (req, res) => {
 
 router.get('/today', protect, async (req, res) => {
     try {
-        const now = new Date();
+        const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
         const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const attendance = await Attendance.findOne({ user: req.user._id, date: today });
         const startOfMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;

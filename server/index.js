@@ -1,3 +1,6 @@
+// ✅ FIRST LINE
+process.env.TZ = 'Asia/Kolkata';
+
 import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';

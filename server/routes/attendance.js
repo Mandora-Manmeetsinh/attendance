@@ -36,15 +36,18 @@ async function getShiftConfig(user) {
     return await ShiftConfig.findOne(query);
 }
 
-function isWithinShiftWindow(shiftConfig) {
+function isWithinShiftWindow(shiftConfig, officeConfig) {
     const now = new Date();
     const shiftStart = parseTimeToday(shiftConfig.shift_start);
     const shiftEnd = parseTimeToday(shiftConfig.shift_end);
-    return now >= shiftStart && now <= shiftEnd;
+    const gracePeriodMs = (5) * 60 * 1000;
+    const cutoffTime = new Date(shiftStart.getTime() + gracePeriodMs);
+    
+    return now <= cutoffTime;
 }
-function isLateCheckIn(checkInTime, shiftConfig) {
+function isLateCheckIn(checkInTime, shiftConfig, officeConfig) {
     const shiftStart = parseTimeToday(shiftConfig.shift_start);
-    const gracePeriodMs = 15 * 60 * 1000;
+    const gracePeriodMs = (officeConfig?.grace_period_mins || 5) * 60 * 1000;
     const graceEnd = new Date(shiftStart.getTime() + gracePeriodMs);
 
     return checkInTime > graceEnd;
@@ -82,7 +85,7 @@ function determineStatus(checkInTime, shiftStart, gracePeriod, isWithinRadius) {
 
     const [hours, minutes] = shiftStart.split(':').map(Number);
     const shiftStartTime = new Date(checkInTime.getFullYear(), checkInTime.getMonth(), checkInTime.getDate(), hours, minutes);
-    const lateThreshold = new Date(shiftStartTime.getTime() + (gracePeriod || 15) * 60000);
+    const lateThreshold = new Date(shiftStartTime.getTime() + (gracePeriod) * 60000);
 
     return checkInTime <= lateThreshold ? 'present' : 'late';
 }
@@ -141,17 +144,20 @@ router.post('/check-in', protect, async (req, res) => {
             shiftConfig = await getShiftConfig(user);
 
             if (shiftConfig) {
-                if (!isWithinShiftWindow(shiftConfig)) {
+                const office = await Office.findOne();
+                if (!isWithinShiftWindow(shiftConfig, office)) {
                     const shiftStart = parseTimeToday(shiftConfig.shift_start);
-                    const shiftEnd = parseTimeToday(shiftConfig.shift_end);
+                    const gracePeriodMs = (office?.grace_period_mins || 5) * 60 * 1000;
+                    const cutoffTime = new Date(shiftStart.getTime() + gracePeriodMs);
+                    
                     return res.status(400).json({
                         error: 'Check-in is not allowed at this time',
-                        message: `You can only check in during your shift: ${shiftStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} - ${shiftEnd.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`,
+                        message: `Check-in is strictly allowed only until ${cutoffTime.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`,
                         currentTime: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
                     });
                 }
 
-                isLate = isLateCheckIn(new Date(), shiftConfig);
+                isLate = isLateCheckIn(new Date(), shiftConfig, office);
 
                 const startOfMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
 

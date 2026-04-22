@@ -22,7 +22,7 @@ const officeSchema = new mongoose.Schema({
     grace_period_mins: {
         type: Number,
         required: true,
-        default: 15,
+        default: 5,
     },
 }, {
     timestamps: true,

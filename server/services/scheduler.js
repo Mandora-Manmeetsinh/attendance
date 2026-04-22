@@ -37,40 +37,6 @@ const initScheduler = () => {
         }
     }, { scheduled: true, timezone: timezone });
 
-    // 2:00 PM — pause timers for employees on mandatory break
-    cron.schedule('0 14 * * *', async () => {
-        try {
-            const today = getISTToday();
-            const employeeIds = await User.find({ role: 'employee' }).distinct('_id');
-
-            const result = await Attendance.updateMany(
-                {
-                    user: { $in: employeeIds },
-                    date: today,
-                    check_in: { $exists: true },
-                    check_out: { $exists: false },
-                    is_on_break: false
-                },
-                { $set: { is_on_break: true, break_start: new Date() } }
-            );
-            console.log(`[${new Date().toISOString()}] Break started for ${result.modifiedCount} employees.`);
-        } catch (error) {
-            console.error('Break pause failed:', error);
-        }
-    }, { scheduled: true, timezone: timezone });
-
-    // 2:45 PM — remind employees break is ending
-    cron.schedule('45 14 * * *', async () => {
-        try {
-            const employees = await User.find({ role: 'employee' });
-            for (const employee of employees) {
-                await sendBreakEndingReminder(employee);
-            }
-        } catch (error) {
-            console.error('Break ending reminder failed:', error);
-        }
-    }, { scheduled: true, timezone: timezone });
-
     // Every 5 mins — send check-out reminder if shift just ended
     cron.schedule('*/5 * * * *', async () => {
         try {

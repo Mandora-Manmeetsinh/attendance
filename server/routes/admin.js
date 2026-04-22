@@ -499,72 +499,146 @@ router.get('/attendance/export', protect, admin, async (req, res) => {
             });
         }
 
+        // 1. Setup Workbook & Professional Worksheet
         const workbook = new ExcelJS.Workbook();
-        const worksheet = workbook.addWorksheet('Attendance Report');
+        const worksheet = workbook.addWorksheet('Attendance Analytics');
+        
+        // 2. Add Branded Title & Meta Data
+        worksheet.mergeCells('A1:L1');
+        const titleCell = worksheet.getCell('A1');
+        titleCell.value = 'EXOTIC INFOTECH - ATTENDANCE INTELLIGENCE REPORT';
+        titleCell.font = { name: 'Arial Black', size: 16, color: { argb: 'FFFFFFFF' } };
+        titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
+        titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F46E5' } };
 
+        worksheet.mergeCells('A2:L2');
+        const dateRangeCell = worksheet.getCell('A2');
+        dateRangeCell.value = `Period: ${startDate || 'All Time'} to ${endDate || 'Present'}`;
+        dateRangeCell.font = { bold: true, italic: true, color: { argb: 'FF4F46E5' } };
+        dateRangeCell.alignment = { horizontal: 'center' };
+
+        // 3. Add Analytics Summary Section
+        const totalRecords = records.length;
+        const totalLate = records.filter(r => r.status === 'late').length;
+        const totalViolations = records.filter(r => r.is_policy_violation).length;
+        const totalPresent = records.filter(r => r.status === 'present').length;
+
+        worksheet.addRow([]); // Spacer
+        worksheet.addRow(['SUMMARY ANALYTICS', '', '', '', '', '', '', '', '', '', '', '']);
+        const summaryHeader = worksheet.getRow(4);
+        summaryHeader.font = { bold: true, size: 12 };
+        
+        worksheet.addRow(['Total Employees Checked-in', totalRecords, '', 'Total On-Time', totalPresent, '', 'Total Late Arrivals', totalLate, '', 'Policy Violations', totalViolations]);
+        worksheet.getRow(5).font = { bold: true };
+        worksheet.getRow(5).alignment = { horizontal: 'left' };
+        
+        worksheet.addRow([]); // Spacer
+
+        // 4. Define Table Columns
+        const headerRowIndex = 7;
         worksheet.columns = [
-            { header: 'Date', key: 'date', width: 15 },
-            { header: 'Name', key: 'name', width: 25 },
-            { header: 'Email', key: 'email', width: 30 },
-            { header: 'Role', key: 'role', width: 15 },
-            { header: 'Shift/Batch', key: 'shift', width: 20 },
-            { header: 'Check In', key: 'check_in', width: 15 },
-            { header: 'Check Out', key: 'check_out', width: 15 },
-            { header: 'Break (Mins)', key: 'break_minutes', width: 15 },
-            { header: 'Worked (Net Mins)', key: 'worked_minutes', width: 18 },
-            { header: 'Work Mode', key: 'work_mode', width: 15 },
-            { header: 'Status', key: 'status', width: 15 },
-            { header: 'Violation', key: 'violation', width: 12 },
+            { header: 'LOG DATE', key: 'date', width: 15 },
+            { header: 'TEAM MEMBER', key: 'name', width: 25 },
+            { header: 'EMAIL IDENTITY', key: 'email', width: 30 },
+            { header: 'ROLE', key: 'role', width: 15 },
+            { header: 'SHIFT/BATCH', key: 'shift', width: 15 },
+            { header: 'ENTRY (IST)', key: 'check_in', width: 12 },
+            { header: 'EXIT (IST)', key: 'check_out', width: 12 },
+            { header: 'BREAKS (MIN)', key: 'break_minutes', width: 12 },
+            { header: 'PRODUCTION', key: 'worked_hours', width: 18 },
+            { header: 'MODE', key: 'work_mode', width: 12 },
+            { header: 'COMPLIANCE', key: 'status', width: 15 },
+            { header: 'ALERT', key: 'violation', width: 12 },
         ];
 
-        worksheet.getRow(1).font = { bold: true };
-        worksheet.getRow(1).fill = {
-            type: 'pattern',
-            pattern: 'solid',
-            fgColor: { argb: 'FFE0E0E0' }
-        };
+        // 5. Professional Header Styling
+        const headerRow = worksheet.getRow(headerRowIndex);
+        headerRow.height = 30;
+        headerRow.eachCell((cell) => {
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' }, size: 11 };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } }; // Dark Slate
+            cell.alignment = { vertical: 'middle', horizontal: 'center' };
+            cell.border = {
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' }
+            };
+        });
 
-        const addRecordRow = (record) => {
+        // 6. Data Injection & Conditional Styling
+        records.forEach((record, idx) => {
             const user = record.user || {};
-            worksheet.addRow({
+            const workedMins = record.worked_minutes || 0;
+            const hours = Math.floor(workedMins / 60);
+            const mins = workedMins % 60;
+            const productionStr = `${hours}h ${mins}m`;
+
+            const row = worksheet.addRow({
                 date: record.date,
-                name: user.full_name || 'N/A',
+                name: (user.full_name || 'N/A').toUpperCase(),
                 email: user.email || 'N/A',
-                role: user.role ? (user.role.charAt(0).toUpperCase() + user.role.slice(1)) : 'N/A',
-                shift: user.role === 'intern' ? (user.batch ? user.batch.toUpperCase() : 'N/A') : (user.role === 'employee' ? 'OFFICE' : 'N/A'),
-                check_in: record.check_in ? new Date(record.check_in).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
-                check_out: record.check_out ? new Date(record.check_out).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+                role: user.role ? (user.role.toUpperCase()) : 'N/A',
+                shift: user.role === 'intern' ? (user.batch ? user.batch.toUpperCase() : 'N/A') : 'OFFICE',
+                check_in: record.check_in ? new Date(record.check_in).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '—',
+                check_out: record.check_out ? new Date(record.check_out).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : (record.check_in ? 'ACTIVE' : '—'),
                 break_minutes: record.break_minutes || 0,
-                worked_minutes: record.worked_minutes || 0,
-                work_mode: record.work_mode ? record.work_mode.toUpperCase() : 'OFFICE',
-                status: (record.final_status || record.status || 'N/A').toUpperCase(),
-                violation: record.is_policy_violation ? 'YES' : 'NO',
+                worked_hours: productionStr,
+                work_mode: (record.work_mode || 'office').toUpperCase(),
+                status: (record.status || 'N/A').toUpperCase(),
+                violation: record.is_policy_violation ? '⚠️ ALERT' : '✅ CLEAN',
             });
+
+            // Styling for each row
+            row.alignment = { vertical: 'middle', horizontal: 'center' };
+            
+            // Zebra Striping
+            if (idx % 2 === 0) {
+                row.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+            }
+
+            // Status Color Coding
+            const statusCell = row.getCell('status');
+            if (record.status === 'present') {
+                statusCell.font = { bold: true, color: { argb: 'FF10B981' } }; // Green
+            } else if (record.status === 'late' || record.status === 'early_exit') {
+                statusCell.font = { bold: true, color: { argb: 'FFF59E0B' } }; // Orange/Amber
+            } else if (record.status === 'absent') {
+                statusCell.font = { bold: true, color: { argb: 'FFEF4444' } }; // Red
+            }
+
+            // Violation Highlighting
+            const violationCell = row.getCell('violation');
+            if (record.is_policy_violation) {
+                violationCell.font = { bold: true, color: { argb: 'FFEF4444' } };
+            }
+
+            // Cell Borders
+            row.eachCell((cell) => {
+                cell.border = {
+                    top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                    left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                    bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+                    right: { style: 'thin', color: { argb: 'FFE2E8F0' } }
+                };
+            });
+        });
+
+        // 7. Final Polish: Auto-filter & Freeze Panes
+        worksheet.autoFilter = {
+            from: { row: headerRowIndex, column: 1 },
+            to: { row: headerRowIndex + records.length, column: 12 }
         };
+        worksheet.views = [{ state: 'frozen', ySplit: headerRowIndex }];
 
-        const employees = records.filter(r => r.user?.role === 'employee');
-        const interns = records.filter(r => r.user?.role === 'intern');
-
-        if (employees.length > 0) {
-            const row = worksheet.addRow({ date: '--- EMPLOYEES ---' });
-            row.font = { bold: true };
-            employees.forEach(addRecordRow);
-        }
-
-        if (interns.length > 0) {
-            if (employees.length > 0) worksheet.addRow([]); // Spacer
-            const row = worksheet.addRow({ date: '--- INTERNS ---' });
-            row.font = { bold: true };
-            interns.forEach(addRecordRow);
-        }
-
+        // 8. Stream Response
         res.setHeader(
             'Content-Type',
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         );
         res.setHeader(
             'Content-Disposition',
-            'attachment; filename=' + `attendance_${startDate || 'all'}_to_${endDate || 'all'}.xlsx`
+            'attachment; filename=' + `attendance_analytics_${startDate || 'full'}.xlsx`
         );
 
         await workbook.xlsx.write(res);

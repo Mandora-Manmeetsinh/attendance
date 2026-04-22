@@ -356,6 +356,22 @@ export default function AdminAttendance() {
                                  </div>
                               </TableCell>
                               <TableCell>
+                                 <div className="flex flex-col gap-0.5">
+                                    <p className="text-sm font-black text-slate-800">
+                                       {r.check_in ? format(new Date(r.check_in), 'hh:mm a') : '—'}
+                                    </p>
+                                    <p className="text-[9px] font-black uppercase text-muted-foreground opacity-60 italic">Entry</p>
+                                 </div>
+                              </TableCell>
+                              <TableCell>
+                                 <div className="flex flex-col gap-0.5">
+                                    <p className="text-sm font-black text-slate-800">
+                                       {r.check_out ? format(new Date(r.check_out), 'hh:mm a') : (r.check_in ? 'Active' : '—')}
+                                    </p>
+                                    <p className="text-[9px] font-black uppercase text-muted-foreground opacity-60 italic">Exit</p>
+                                 </div>
+                              </TableCell>
+                              <TableCell>
                                  <div className="flex flex-col gap-1.5">
                                     <div className="flex items-center gap-2">
                                        <Badge variant="outline" className="font-black uppercase text-[9px] px-2 py-0 border-none bg-muted shadow-sm">{r.user?.role}</Badge>
@@ -364,7 +380,7 @@ export default function AdminAttendance() {
                                     {r.work_mode === 'wfh' && (
                                        <div className="flex items-center gap-1 text-indigo-500">
                                           <MapPin className="w-3 h-3" />
-                                          <span className="text-[10px] font-black uppercase tracking-widest">REMOTE SESSION</span>
+                                          <span className="text-[10px] font-black uppercase tracking-widest">REMOTE</span>
                                        </div>
                                     )}
                                  </div>
@@ -376,7 +392,7 @@ export default function AdminAttendance() {
                                     </div>
                                     <div className="space-y-0.5">
                                        <p className="text-sm font-black text-slate-800">{r.break_minutes || 0}<span className="text-[10px] opacity-40 ml-0.5">m</span></p>
-                                       <p className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground opacity-60">Total Break</p>
+                                       <p className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground opacity-60">Break</p>
                                     </div>
                                  </div>
                               </TableCell>
@@ -389,7 +405,7 @@ export default function AdminAttendance() {
                                        <p className="text-sm font-black text-slate-800">
                                           {Math.floor((r.worked_minutes || 0) / 60)}h {(r.worked_minutes || 0) % 60}m
                                        </p>
-                                       <p className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground opacity-60">Active Production</p>
+                                       <p className="text-[9px] font-black uppercase tracking-tighter text-muted-foreground opacity-60">Production</p>
                                     </div>
                                  </div>
                               </TableCell>
@@ -399,7 +415,7 @@ export default function AdminAttendance() {
                                     {r.is_policy_violation && (
                                        <div className="flex items-center gap-1 text-destructive animate-pulse">
                                           <AlertCircle className="w-3 h-3" />
-                                          <span className="text-[8px] font-black uppercase tracking-widest">Compliance Alert</span>
+                                          <span className="text-[8px] font-black uppercase tracking-widest">Alert</span>
                                        </div>
                                     )}
                                  </div>

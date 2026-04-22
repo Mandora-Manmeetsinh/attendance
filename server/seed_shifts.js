@@ -18,7 +18,7 @@ const shiftConfigs = [
         shift_end: '18:30',
         check_in_window_start: '10:00',
         check_in_window_end: '10:35',
-        min_minutes: 435,
+        min_minutes: 480,
         description: 'Full-time Employee (10:30 AM - 6:30 PM)',
     },
     {

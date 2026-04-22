@@ -52,10 +52,12 @@ function isWithinShiftWindow(shiftConfig) {
     const now = new Date();
     const shiftStart = parseTimeToday(shiftConfig.shift_start);
     const shiftEnd = parseTimeToday(shiftConfig.shift_end);
-    const gracePeriodMs = (5) * 60 * 1000;
-    const cutoffTime = new Date(shiftStart.getTime() + gracePeriodMs);
+    
+    // Allow check-in from 30 mins before shift start until shift end
+    const earlyCheckInAllowedMs = 30 * 60 * 1000;
+    const startTime = new Date(shiftStart.getTime() - earlyCheckInAllowedMs);
 
-    return now <= cutoffTime;
+    return now >= startTime && now <= shiftEnd;
 }
 function isLateCheckIn(checkInTime, shiftConfig, officeConfig) {
     const shiftStart = parseTimeToday(shiftConfig.shift_start);
@@ -82,7 +84,7 @@ function calculateFinalStatus(isLate, isEarlyCheckoutFlag, workedMinutes, shiftC
     }
 
     if (isLate && isEarlyCheckoutFlag) {
-        return 'halfday';
+        return 'absent';
     } else if (isLate) {
         return 'late';
     } else if (isEarlyCheckoutFlag) {
@@ -157,14 +159,13 @@ router.post('/check-in', protect, async (req, res) => {
 
             if (shiftConfig) {
                 const office = await Office.findOne();
-                if (!isWithinShiftWindow(shiftConfig, office)) {
-                    const shiftStart = parseTimeToday(shiftConfig.shift_start);
-                    const gracePeriodMs = (office?.grace_period_mins || 5) * 60 * 1000;
-                    const cutoffTime = new Date(shiftStart.getTime() + gracePeriodMs);
+                const shiftStart = parseTimeToday(shiftConfig.shift_start);
+                const shiftEnd = parseTimeToday(shiftConfig.shift_end);
 
+                if (!isWithinShiftWindow(shiftConfig, office)) {
                     return res.status(400).json({
                         error: 'Check-in is not allowed at this time',
-                        message: `You can only check in during your shift: ${shiftStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} - ${shiftEnd.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`,
+                        message: `Check-in is only allowed during your shift: ${shiftStart.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })} - ${shiftEnd.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}`,
                         currentTime: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
                     });
                 }

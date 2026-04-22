@@ -6,12 +6,19 @@ import Holiday from '../models/Holiday.js';
 import { sendCheckInReminder, sendBreakEndingReminder, sendCheckOutReminder } from './emailService.js';
 
 const initScheduler = () => {
+    const timezone = 'Asia/Kolkata';
     console.log('Attendance schedulers started.');
+
+    // Helper to get today's date string in IST
+    const getISTToday = () => {
+        const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    };
 
     // 10:25 AM — remind employees and batch 1 interns to check in
     cron.schedule('25 10 * * *', async () => {
         try {
-            const today = new Date().toISOString().split('T')[0];
+            const today = getISTToday();
             const isHoliday = await Holiday.findOne({ date: today });
             if (isHoliday) {
                 console.log(`Skipping check-in reminder: Today is holiday (${isHoliday.name})`);
@@ -28,12 +35,12 @@ const initScheduler = () => {
         } catch (error) {
             console.error('Check-in reminder failed:', error);
         }
-    });
+    }, { scheduled: true, timezone: timezone });
 
     // 2:00 PM — pause timers for employees on mandatory break
     cron.schedule('0 14 * * *', async () => {
         try {
-            const today = new Date().toISOString().split('T')[0];
+            const today = getISTToday();
             const employeeIds = await User.find({ role: 'employee' }).distinct('_id');
 
             const result = await Attendance.updateMany(
@@ -46,11 +53,11 @@ const initScheduler = () => {
                 },
                 { $set: { is_on_break: true, break_start: new Date() } }
             );
-            console.log(`Break started for ${result.modifiedCount} employees.`);
+            console.log(`[${new Date().toISOString()}] Break started for ${result.modifiedCount} employees.`);
         } catch (error) {
             console.error('Break pause failed:', error);
         }
-    });
+    }, { scheduled: true, timezone: timezone });
 
     // 2:45 PM — remind employees break is ending
     cron.schedule('45 14 * * *', async () => {
@@ -62,13 +69,13 @@ const initScheduler = () => {
         } catch (error) {
             console.error('Break ending reminder failed:', error);
         }
-    });
+    }, { scheduled: true, timezone: timezone });
 
     // Every 5 mins — send check-out reminder if shift just ended
     cron.schedule('*/5 * * * *', async () => {
         try {
-            const now = new Date();
-            const today = now.toISOString().split('T')[0];
+            const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Asia/Kolkata" }));
+            const today = getISTToday();
             const shiftConfigs = await ShiftConfig.find({});
 
             for (const config of shiftConfigs) {
@@ -104,7 +111,7 @@ const initScheduler = () => {
         } catch (error) {
             console.error('Check-out reminder check failed:', error);
         }
-    });
+    }, { scheduled: true, timezone: timezone });
 };
 
 export default initScheduler;

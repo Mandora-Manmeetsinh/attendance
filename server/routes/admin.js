@@ -3,6 +3,7 @@ import User from '../models/User.js';
 import Attendance from '../models/Attendance.js';
 import SystemSettings from '../models/SystemSettings.js';
 import Holiday from '../models/Holiday.js';
+import ShiftConfig from '../models/ShiftConfig.js';
 import ExcelJS from 'exceljs';
 import { protect, admin } from '../middleware/authMiddleware.js';
 
@@ -212,7 +213,24 @@ function generateTempPassword() {
     return password;
 }
 
-function getShiftForRole(role, batch) {
+async function getShiftForRole(role, batch) {
+    try {
+        const query = { role };
+        if (role === 'intern') {
+            query.batch = batch;
+        } else {
+            query.batch = null;
+        }
+        
+        const config = await ShiftConfig.findOne(query);
+        if (config) {
+            return { shift_start: config.shift_start, shift_end: config.shift_end };
+        }
+    } catch (error) {
+        console.error('Error in getShiftForRole:', error);
+    }
+    
+    // Fallback defaults if no config found in database
     if (role === 'employee') {
         return { shift_start: '10:30:00', shift_end: '18:30:00' };
     } else if (role === 'intern') {
@@ -257,7 +275,7 @@ router.post('/users', protect, admin, async (req, res) => {
         }
 
         const tempPassword = generateTempPassword();
-        const { shift_start, shift_end } = getShiftForRole(role, batch);
+        const { shift_start, shift_end } = await getShiftForRole(role, batch);
 
         const user = await User.create({
             full_name,
@@ -317,13 +335,13 @@ router.put('/users/:id', protect, admin, async (req, res) => {
         if (studentId) user.studentId = studentId;
         if (role && ['employee', 'intern'].includes(role)) {
             user.role = role;
-            const { shift_start, shift_end } = getShiftForRole(role, batch || user.batch);
+            const { shift_start, shift_end } = await getShiftForRole(role, batch || user.batch);
             user.shift_start = shift_start;
             user.shift_end = shift_end;
         }
         if (batch && ['batch1', 'batch2'].includes(batch)) {
             user.batch = batch;
-            const { shift_start, shift_end } = getShiftForRole(user.role, batch);
+            const { shift_start, shift_end } = await getShiftForRole(user.role, batch);
             user.shift_start = shift_start;
             user.shift_end = shift_end;
         }

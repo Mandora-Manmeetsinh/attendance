@@ -224,7 +224,7 @@ async function getShiftForRole(role, batch) {
         
         const config = await ShiftConfig.findOne(query);
         if (config) {
-            return { shift_start: config.shift_start, shift_end: config.shift_end };
+            return { shift_start: config.shift_start, shift_end: config.shift_end , check_in_window_start: config.check_in_window_start, check_in_window_end: config.check_in_window_end, min_minutes: config.min_minutes , description: config.description , role: config.role, batch: config.batch  , _id: config._id , createdAt: config.createdAt, updatedAt: config.updatedAt};
         }
     } catch (error) {
         console.error('Error in getShiftForRole:', error);
@@ -232,15 +232,15 @@ async function getShiftForRole(role, batch) {
     
     // Fallback defaults if no config found in database
     if (role === 'employee') {
-        return { shift_start: '10:30:00', shift_end: '18:30:00' };
+        return { shift_start: '10:30:00', shift_end: '18:30:00' , check_in_window_start: '10:00:00', check_in_window_end: '10:35:00', min_minutes: 480, description: 'Full-time Employee (10:30 AM - 6:30 PM)' };
     } else if (role === 'intern') {
         if (batch === 'batch1') {
-            return { shift_start: '10:30:00', shift_end: '13:30:00' };
+            return { shift_start: '10:30:00', shift_end: '13:30:00' , check_in_window_start: '10:00:00', check_in_window_end: '10:35:00', min_minutes: 180, description: 'Intern Batch 1 (10:30 AM - 1:30 PM)' };
         } else if (batch === 'batch2') {
-            return { shift_start: '15:00:00', shift_end: '18:00:00' };
+            return { shift_start: '15:00:00', shift_end: '18:00:00' , check_in_window_start: '14:30:00', check_in_window_end: '15:05:00', min_minutes: 180, description: 'Intern Batch 2 (3:00 PM - 6:00 PM)' };
         }
     }
-    return { shift_start: '09:00:00', shift_end: '18:00:00' };
+    return { shift_start: '09:00:00', shift_end: '18:00:00' , check_in_window_start: '09:00:00', check_in_window_end: '09:35:00', min_minutes: 480, description: 'Default Shift (9:00 AM - 6:00 PM)' };
 }
 
 router.post('/users', protect, admin, async (req, res) => {

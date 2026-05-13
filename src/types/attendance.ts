@@ -5,4 +5,5 @@ export interface AttendanceRecord {
     check_out: string | null;
     status: string;
     distance_at_check_in?: number | null;
+    distance_at_check_out?: number | null;
 }

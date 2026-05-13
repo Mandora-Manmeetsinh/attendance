@@ -367,6 +367,7 @@ export default function AdminEmployees() {
                               <SelectContent className="rounded-xl">
                                 <SelectItem value="batch1">Batch 1 (AM)</SelectItem>
                                 <SelectItem value="batch2">Batch 2 (PM)</SelectItem>
+                                <SelectItem value='batch3'>Batch 3 (Hybrid)</SelectItem>
                               </SelectContent>
                             </Select>
                           </div>

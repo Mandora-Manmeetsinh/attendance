@@ -8,7 +8,7 @@ const shiftConfigSchema = new mongoose.Schema({
     },
     batch: {
         type: String,
-        enum: ['batch1', 'batch2', null],
+        enum: ['batch1', 'batch2', 'batch3', null],
         default: null,
     },
     shift_start: {
